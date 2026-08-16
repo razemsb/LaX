@@ -20,8 +20,11 @@ pub fn list_subdirs(dir: &Path) -> Vec<String> {
 pub fn php_versions(root: &Path) -> Vec<String> {
     list_subdirs(&root.join("bin").join("php"))
         .into_iter()
-        .filter(|n| root.join("bin").join("php").join(n).join("php.exe").exists()
-            || root.join("bin").join("php").join(n).join("php-cgi.exe").exists())
+        .filter(|n| {
+            let d = root.join("bin").join("php").join(n);
+            crate::platform::bin_path(&d, "php").exists()
+                || crate::platform::bin_path(&d, "php-cgi").exists()
+        })
         .collect()
 }
 

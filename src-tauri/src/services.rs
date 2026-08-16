@@ -11,7 +11,7 @@ use crate::process::{run_capture, taskkill_image, ProcessTable};
 pub fn start_apache(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> LaxResult<u32> {
     php::apply_php(paths, cfg)?;
     let dir = paths.apache_dir(cfg);
-    let httpd = dir.join("bin").join("httpd.exe");
+    let httpd = crate::platform::bin_path(&dir.join("bin"), "httpd");
     let (code, out) = run_capture(&httpd, &["-t"], &dir)?;
     if code != 0 {
         return Err(LaxError::msg(format!("Apache config test failed:\n{out}")));
@@ -27,13 +27,13 @@ pub fn start_apache(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) ->
 
 pub fn stop_apache(table: &mut ProcessTable) {
     table.stop("apache");
-    taskkill_image("httpd.exe");
+    taskkill_image(&crate::platform::bin("httpd"));
 }
 
 pub fn start_nginx(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> LaxResult<u32> {
     php::apply_php(paths, cfg)?;
     let dir = paths.nginx_dir(cfg);
-    let nginx = dir.join("nginx.exe");
+    let nginx = crate::platform::bin_path(&dir, "nginx");
     if port_open(cfg.nginx_port) {
         return Err(LaxError::msg(format!(
             "port {} is already in use — stop Laragon or Apache first",
@@ -45,18 +45,18 @@ pub fn start_nginx(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> 
 
 pub fn stop_nginx(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) {
     let dir = paths.nginx_dir(cfg);
-    let nginx = dir.join("nginx.exe");
+    let nginx = crate::platform::bin_path(&dir, "nginx");
     if nginx.exists() {
         let _ = run_capture(&nginx, &["-s", "stop"], &dir);
     }
     table.stop("nginx");
-    taskkill_image("nginx.exe");
+    taskkill_image(&crate::platform::bin("nginx"));
 }
 
 pub fn start_mariadb(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> LaxResult<u32> {
     ensure_datadir(paths, cfg)?;
     let dir = paths.mysql_dir(cfg);
-    let mysqld = dir.join("bin").join("mysqld.exe");
+    let mysqld = crate::platform::bin_path(&dir.join("bin"), "mysqld");
     let ini = dir.join("my.ini");
     if port_open(cfg.mysql_port) {
         return Err(LaxError::msg(format!(
@@ -73,14 +73,14 @@ pub fn start_mariadb(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -
 
 pub fn stop_mariadb(table: &mut ProcessTable) {
     table.stop("mariadb");
-    taskkill_image("mysqld.exe");
-    taskkill_image("mariadbd.exe");
+    taskkill_image(&crate::platform::bin("mysqld"));
+    taskkill_image(&crate::platform::bin("mariadbd"));
 }
 
 pub fn start_php_cgi(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
     php::apply_php(paths, cfg)?;
     let php_dir = paths.php_dir(cfg);
-    let cgi = php_dir.join("php-cgi.exe");
+    let cgi = crate::platform::bin_path(&php_dir, "php-cgi");
     let phprc = unix(&php_dir);
     table.stop_prefix("php-cgi");
     let binds: Vec<(u16, String)> = cfg
@@ -111,8 +111,8 @@ fn ensure_datadir(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
         return Ok(());
     }
     let bin = paths.mysql_dir(cfg).join("bin");
-    for name in ["mariadb-install-db.exe", "mysql_install_db.exe"] {
-        let exe = bin.join(name);
+    for name in ["mariadb-install-db", "mysql_install_db"] {
+        let exe = crate::platform::bin_path(&bin, name);
         if exe.exists() {
             let datadir = format!("--datadir={}", unix(&data));
             let (code, out) = run_capture(&exe, &[&datadir, "--password="], &bin)?;
@@ -122,7 +122,7 @@ fn ensure_datadir(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
             tracing::warn!("install_db {name} exit {code}: {out}");
         }
     }
-    let mysqld = bin.join("mysqld.exe");
+    let mysqld = crate::platform::bin_path(&bin, "mysqld");
     let datadir = format!("--datadir={}", unix(&data));
     let (code, out) = run_capture(
         &mysqld,

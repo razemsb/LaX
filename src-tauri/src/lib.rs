@@ -6,6 +6,7 @@ mod hosts;
 mod logs;
 mod paths;
 mod php;
+mod platform;
 mod portable;
 mod process;
 mod projects;

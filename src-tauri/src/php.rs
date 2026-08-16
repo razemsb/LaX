@@ -221,7 +221,7 @@ fn normalize_ext_name(value: &str) -> Option<String> {
 
 fn dll_to_name(fname: &str) -> Option<String> {
     let lower = fname.to_ascii_lowercase();
-    if !lower.ends_with(".dll") {
+    if !(lower.ends_with(".dll") || lower.ends_with(".so")) {
         return None;
     }
     normalize_ext_name(&lower)

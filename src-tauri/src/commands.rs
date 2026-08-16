@@ -1,17 +1,13 @@
-use std::os::windows::process::CommandExt;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::path::PathBuf;
 
 use tauri::State;
 
 use crate::config::LaxConfig;
 use crate::logs;
 use crate::php;
+use crate::platform;
 use crate::projects::ProjectInfo;
 use crate::state::{AppState, ServiceInfo, Snapshot};
-
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
 
 fn with_state<T, F>(state: &AppState, f: F) -> Result<T, String>
 where
@@ -129,47 +125,28 @@ pub fn open_ini(state: State<AppState>, which: String) -> Result<(), String> {
             "lax" => o.paths.config_file.clone(),
             _ => return Err(format!("unknown ini: {which}")),
         };
-        open_editor(&path)
+        platform::open_editor(&path)
     })
 }
 
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
-    spawn_cmd(&["/C", "start", "", &url])
+    platform::open_url(&url)
 }
 
 #[tauri::command]
 pub fn open_path(path: String) -> Result<(), String> {
-    let p = PathBuf::from(&path);
-    if !p.exists() {
-        return Err(format!("path not found: {path}"));
-    }
-    Command::new("explorer.exe")
-        .arg(&p)
-        .spawn()
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    platform::open_path(&PathBuf::from(path))
 }
 
 #[tauri::command]
 pub fn open_terminal(path: String) -> Result<(), String> {
-    let dir = PathBuf::from(&path);
-    if !dir.exists() {
-        return Err(format!("path not found: {path}"));
-    }
-    spawn_console(&dir, None, None)
+    platform::open_terminal(&PathBuf::from(path), None, None)
 }
 
 #[tauri::command]
 pub fn open_vscode(path: String) -> Result<(), String> {
-    Command::new("cmd.exe")
-        .args(["/C", "code", &path])
-        .creation_flags(CREATE_NO_WINDOW)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| format!("VS Code not found: {e}"))?;
-    Ok(())
+    platform::open_vscode(&PathBuf::from(path))
 }
 
 #[tauri::command]
@@ -181,7 +158,7 @@ pub fn run_project_action(
     with_state(&state, |o| {
         let dir = resolve_www_dir(&o.paths, &o.config, &path)?;
         let php_dir = o.paths.php_dir(&o.config);
-        let composer = o.paths.root.join("bin").join("composer").join("composer.bat");
+        let composer = platform::composer_file(&o.paths.root);
         let (line, extra_path) = match action.as_str() {
             "npm-install" => {
                 if !dir.join("package.json").exists() {
@@ -212,7 +189,7 @@ pub fn run_project_action(
             }
             _ => return Err(format!("unknown action: {action}")),
         };
-        spawn_console(&dir, Some(&line), extra_path.as_deref())
+        platform::open_terminal(&dir, Some(&line), extra_path.as_deref())
     })
 }
 
@@ -227,42 +204,4 @@ fn resolve_www_dir(
         return Err("проект должен быть внутри www".into());
     }
     Ok(dir)
-}
-
-fn spawn_cmd(args: &[&str]) -> Result<(), String> {
-    Command::new("cmd.exe")
-        .args(args)
-        .creation_flags(CREATE_NO_WINDOW)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-fn spawn_console(dir: &Path, cmdline: Option<&str>, extra_path: Option<&Path>) -> Result<(), String> {
-    let mut cmd = Command::new("cmd.exe");
-    if let Some(line) = cmdline {
-        cmd.args(["/K", line]);
-    } else {
-        cmd.arg("/K");
-    }
-    cmd.current_dir(dir).creation_flags(CREATE_NEW_CONSOLE);
-    if let Some(bin) = extra_path {
-        let rest = std::env::var("PATH").unwrap_or_default();
-        cmd.env("PATH", format!("{};{rest}", bin.display()));
-    }
-    cmd.spawn().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-fn open_editor(path: &Path) -> Result<(), String> {
-    if !path.exists() {
-        return Err(format!("file not found: {}", path.display()));
-    }
-    Command::new("notepad.exe")
-        .arg(path)
-        .spawn()
-        .map_err(|e| e.to_string())?;
-    Ok(())
 }

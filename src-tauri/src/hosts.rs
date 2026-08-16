@@ -2,13 +2,14 @@ use std::fs;
 use std::path::Path;
 
 use crate::error::LaxResult;
+use crate::platform;
 use crate::projects::ProjectInfo;
 
 const BEGIN: &str = "# LaX begin";
 const END: &str = "# LaX end";
 
 pub fn hosts_path() -> &'static str {
-    r"C:\Windows\System32\drivers\etc\hosts"
+    platform::hosts_path()
 }
 
 pub fn writable() -> bool {

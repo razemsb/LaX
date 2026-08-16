@@ -4,11 +4,10 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 
 use crate::error::{LaxError, LaxResult};
+use crate::platform;
 
 #[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-#[cfg(windows)]
-const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+const CREATE_NO_WINDOW_GROUP: u32 = 0x0800_0000 | 0x0000_0200;
 
 #[derive(Debug)]
 pub struct ManagedProcess {
@@ -56,7 +55,12 @@ impl ProcessTable {
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
-            cmd.creation_flags(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP);
+            cmd.creation_flags(CREATE_NO_WINDOW_GROUP);
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            cmd.process_group(0);
         }
 
         let child = cmd
@@ -91,7 +95,7 @@ impl ProcessTable {
             if let Some(mut child) = proc.child.take() {
                 let _ = child.kill();
             }
-            taskkill(proc.pid);
+            platform::kill_pid(proc.pid);
         }
     }
 
@@ -115,29 +119,13 @@ impl ProcessTable {
     }
 }
 
+#[allow(dead_code)]
 pub fn taskkill(pid: u32) {
-    if pid == 0 {
-        return;
-    }
-    let mut cmd = Command::new("taskkill");
-    cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(CREATE_NO_WINDOW);
-    }
-    let _ = cmd.stdout(Stdio::null()).stderr(Stdio::null()).status();
+    platform::kill_pid(pid);
 }
 
 pub fn taskkill_image(image: &str) {
-    let mut cmd = Command::new("taskkill");
-    cmd.args(["/F", "/IM", image, "/T"]);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(CREATE_NO_WINDOW);
-    }
-    let _ = cmd.stdout(Stdio::null()).stderr(Stdio::null()).status();
+    platform::kill_image(image);
 }
 
 pub fn run_capture(program: &Path, args: &[&str], cwd: &Path) -> LaxResult<(i32, String)> {
@@ -147,11 +135,7 @@ pub fn run_capture(program: &Path, args: &[&str], cwd: &Path) -> LaxResult<(i32,
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(CREATE_NO_WINDOW);
-    }
+    platform::hide_window(&mut cmd);
     let out = cmd
         .output()
         .map_err(|e| LaxError::msg(format!("{}: {e}", program.display())))?;
