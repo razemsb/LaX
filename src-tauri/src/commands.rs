@@ -11,6 +11,7 @@ use crate::projects::ProjectInfo;
 use crate::state::{AppState, ServiceInfo, Snapshot};
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
 
 fn with_state<T, F>(state: &AppState, f: F) -> Result<T, String>
 where
@@ -156,8 +157,7 @@ pub fn open_terminal(path: String) -> Result<(), String> {
     if !dir.exists() {
         return Err(format!("path not found: {path}"));
     }
-    let cd = format!("cd /d \"{}\"", dir.display());
-    spawn_cmd(&["/C", "start", "LaX", "cmd.exe", "/K", &cd])
+    spawn_console(&dir, None, None)
 }
 
 #[tauri::command]
@@ -172,6 +172,63 @@ pub fn open_vscode(path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+pub fn run_project_action(
+    state: State<AppState>,
+    path: String,
+    action: String,
+) -> Result<(), String> {
+    with_state(&state, |o| {
+        let dir = resolve_www_dir(&o.paths, &o.config, &path)?;
+        let php_dir = o.paths.php_dir(&o.config);
+        let composer = o.paths.root.join("bin").join("composer").join("composer.bat");
+        let (line, extra_path) = match action.as_str() {
+            "npm-install" => {
+                if !dir.join("package.json").exists() {
+                    return Err("package.json не найден".into());
+                }
+                ("npm install".to_string(), None)
+            }
+            "composer-install" => {
+                if !dir.join("composer.json").exists() {
+                    return Err("composer.json не найден".into());
+                }
+                let composer_cmd = if composer.exists() {
+                    format!("\"{}\" install", composer.display())
+                } else {
+                    "composer install".into()
+                };
+                (composer_cmd, Some(php_dir))
+            }
+            other if other.starts_with("npm-run:") => {
+                let script = other.trim_start_matches("npm-run:");
+                if !crate::projects::is_safe_script(script) {
+                    return Err("недопустимое имя скрипта".into());
+                }
+                if !dir.join("package.json").exists() {
+                    return Err("package.json не найден".into());
+                }
+                (format!("npm run {script}"), None)
+            }
+            _ => return Err(format!("unknown action: {action}")),
+        };
+        spawn_console(&dir, Some(&line), extra_path.as_deref())
+    })
+}
+
+fn resolve_www_dir(
+    paths: &crate::config::Paths,
+    cfg: &LaxConfig,
+    path: &str,
+) -> Result<PathBuf, String> {
+    let www = dunce::canonicalize(paths.www(cfg)).map_err(|e| e.to_string())?;
+    let dir = dunce::canonicalize(PathBuf::from(path)).map_err(|e| e.to_string())?;
+    if !dir.starts_with(&www) || !dir.is_dir() {
+        return Err("проект должен быть внутри www".into());
+    }
+    Ok(dir)
+}
+
 fn spawn_cmd(args: &[&str]) -> Result<(), String> {
     Command::new("cmd.exe")
         .args(args)
@@ -180,6 +237,22 @@ fn spawn_cmd(args: &[&str]) -> Result<(), String> {
         .stderr(Stdio::null())
         .spawn()
         .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn spawn_console(dir: &Path, cmdline: Option<&str>, extra_path: Option<&Path>) -> Result<(), String> {
+    let mut cmd = Command::new("cmd.exe");
+    if let Some(line) = cmdline {
+        cmd.args(["/K", line]);
+    } else {
+        cmd.arg("/K");
+    }
+    cmd.current_dir(dir).creation_flags(CREATE_NEW_CONSOLE);
+    if let Some(bin) = extra_path {
+        let rest = std::env::var("PATH").unwrap_or_default();
+        cmd.env("PATH", format!("{};{rest}", bin.display()));
+    }
+    cmd.spawn().map_err(|e| e.to_string())?;
     Ok(())
 }
 

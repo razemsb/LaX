@@ -80,6 +80,15 @@ export const useAppStore = defineStore("app", {
     async openVscode(path: string) {
       await invoke("open_vscode", { path });
     },
+    async runProjectAction(path: string, action: string) {
+      this.error = "";
+      try {
+        await invoke("run_project_action", { path, action });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
     async openIni(which: string) {
       await invoke("open_ini", { which });
     },

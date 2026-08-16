@@ -53,26 +53,26 @@ watch(() => store.snap?.config.phpVersion, load);
     </section>
 
     <section>
-      <div class="mb-3 flex items-end justify-between gap-3">
-        <div>
+      <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div class="min-w-0">
           <div class="text-[11px] uppercase tracking-wider text-muted">расширения</div>
-          <p class="mt-1 text-xs text-muted">{{ onCount }} включено · после изменений Stop → Start All</p>
+          <p class="mt-1 text-xs text-muted">{{ onCount }} включено · после изменений: Закрыть все → Запустить все</p>
         </div>
-        <div class="flex gap-2">
-          <input v-model="q" placeholder="поиск" class="field w-48 !py-2" />
-          <button class="btn-ghost rounded-lg px-3 py-2 text-xs" @click="store.openIni('php')">php.ini</button>
+        <div class="flex min-w-0 gap-2">
+          <input v-model="q" placeholder="поиск" class="field min-w-0 flex-1 !py-2 lg:w-48 lg:flex-none" />
+          <button class="btn-ghost shrink-0 rounded-lg px-3 py-2 text-xs" @click="store.openIni('php')">php.ini</button>
         </div>
       </div>
 
-      <div class="surface grid max-h-[420px] grid-cols-3 gap-x-2 overflow-auto p-2 scrollbar">
+      <div class="surface grid max-h-[min(420px,calc(100dvh-16rem))] grid-cols-1 gap-x-2 overflow-auto p-2 scrollbar sm:grid-cols-2 lg:grid-cols-3">
         <button
           v-for="ext in filtered"
           :key="ext.name + ext.kind"
-          class="flex items-center justify-between rounded-lg px-3 py-2.5 text-left hover:bg-panel-2"
+          class="flex min-w-0 items-center justify-between rounded-lg px-3 py-2.5 text-left hover:bg-panel-2"
           :disabled="busyExt === ext.name"
           @click="toggle(ext)"
         >
-          <span class="text-sm">
+          <span class="min-w-0 truncate text-sm">
             {{ ext.name }}
             <span v-if="ext.kind === 'zend'" class="text-[10px] text-muted">zend</span>
           </span>
@@ -86,7 +86,7 @@ watch(() => store.snap?.config.phpVersion, load);
             />
           </span>
         </button>
-        <div v-if="!filtered.length" class="col-span-3 px-3 py-6 text-sm text-muted">ничего не найдено</div>
+        <div v-if="!filtered.length" class="col-span-full px-3 py-6 text-sm text-muted">ничего не найдено</div>
       </div>
     </section>
   </div>

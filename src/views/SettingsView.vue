@@ -35,8 +35,8 @@ async function save() {
 </script>
 
 <template>
-  <div v-if="store.snap" class="grid max-w-4xl grid-cols-2 gap-6">
-    <form class="surface space-y-5 p-6" @submit.prevent="save">
+  <div v-if="store.snap" class="grid max-w-4xl grid-cols-1 gap-6 lg:grid-cols-2">
+    <form class="surface space-y-5 p-4 lg:p-6" @submit.prevent="save">
       <label class="block">
         <div class="mb-2 text-[11px] uppercase tracking-wider text-muted">корень сайтов</div>
         <input v-model="form.documentRoot" class="field" />
@@ -48,7 +48,7 @@ async function save() {
           <option value="nginx">Nginx</option>
         </select>
       </label>
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label class="text-xs text-muted">Apache<input v-model.number="form.apachePort" type="number" class="field mt-1" /></label>
         <label class="text-xs text-muted">Nginx<input v-model.number="form.nginxPort" type="number" class="field mt-1" /></label>
         <label class="text-xs text-muted">MySQL<input v-model.number="form.mysqlPort" type="number" class="field mt-1" /></label>

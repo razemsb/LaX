@@ -31,6 +31,12 @@ export interface ProjectInfo {
   url: string;
   localhostUrl: string;
   hasPublic: boolean;
+  kind: string;
+  scripts: string[];
+  hasPackage: boolean;
+  hasComposer: boolean;
+  hasNodeModules: boolean;
+  hasVendor: boolean;
 }
 
 export interface PhpExtension {

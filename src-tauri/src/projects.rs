@@ -14,6 +14,12 @@ pub struct ProjectInfo {
     pub url: String,
     pub localhost_url: String,
     pub has_public: bool,
+    pub kind: String,
+    pub scripts: Vec<String>,
+    pub has_package: bool,
+    pub has_composer: bool,
+    pub has_node_modules: bool,
+    pub has_vendor: bool,
 }
 
 pub fn list_projects(paths: &Paths, cfg: &LaxConfig) -> LaxResult<Vec<ProjectInfo>> {
@@ -43,12 +49,19 @@ pub fn list_projects(paths: &Paths, cfg: &LaxConfig) -> LaxResult<Vec<ProjectInf
         };
         let suffix = if has_public { format!("{name}/public/") } else { format!("{name}/") };
         let url = format!("http://localhost{hostport}/{suffix}");
+        let info = inspect(&path);
         items.push(ProjectInfo {
             url: url.clone(),
             localhost_url: url,
             name,
             path: path.to_string_lossy().into_owned(),
             has_public,
+            kind: info.kind,
+            scripts: info.scripts,
+            has_package: info.has_package,
+            has_composer: info.has_composer,
+            has_node_modules: info.has_node_modules,
+            has_vendor: info.has_vendor,
         });
     }
     items.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -117,4 +130,77 @@ fn sanitize(name: &str) -> LaxResult<String> {
         return Err(LaxError::msg("empty project name"));
     }
     Ok(s)
+}
+
+struct Inspect {
+    kind: String,
+    scripts: Vec<String>,
+    has_package: bool,
+    has_composer: bool,
+    has_node_modules: bool,
+    has_vendor: bool,
+}
+
+fn inspect(dir: &Path) -> Inspect {
+    let has_package = dir.join("package.json").exists();
+    let has_composer = dir.join("composer.json").exists();
+    let has_artisan = dir.join("artisan").exists();
+    let has_vite_cfg = ["vite.config.ts", "vite.config.js", "vite.config.mts", "vite.config.mjs"]
+        .iter()
+        .any(|n| dir.join(n).exists());
+    let wordpress = dir.join("wp-config.php").exists() || dir.join("wp-config-sample.php").exists();
+
+    let mut scripts = Vec::new();
+    let mut has_vite_dep = false;
+    if has_package {
+        if let Ok(raw) = fs::read_to_string(dir.join("package.json")) {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) {
+                if let Some(obj) = json.get("scripts").and_then(|s| s.as_object()) {
+                    scripts = obj.keys().cloned().collect();
+                    scripts.sort();
+                }
+                has_vite_dep = dep_has(&json, "vite") || dep_has(&json, "@vitejs/plugin-vue");
+            }
+        }
+    }
+
+    let kind = if has_artisan && has_composer {
+        "laravel"
+    } else if has_vite_cfg || has_vite_dep {
+        "vite"
+    } else if wordpress {
+        "wordpress"
+    } else if has_package {
+        "node"
+    } else {
+        "php"
+    }
+    .to_string();
+
+    Inspect {
+        kind,
+        scripts,
+        has_package,
+        has_composer,
+        has_node_modules: dir.join("node_modules").is_dir(),
+        has_vendor: dir.join("vendor").is_dir(),
+    }
+}
+
+fn dep_has(json: &serde_json::Value, name: &str) -> bool {
+    json.get("dependencies")
+        .and_then(|d| d.get(name))
+        .is_some()
+        || json
+            .get("devDependencies")
+            .and_then(|d| d.get(name))
+            .is_some()
+}
+
+pub fn is_safe_script(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == ':' || c == '.')
 }

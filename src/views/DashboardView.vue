@@ -31,26 +31,26 @@ async function toggle(id: string, running: boolean) {
 </script>
 
 <template>
-  <div v-if="store.snap" class="space-y-8">
-    <section class="grid grid-cols-4 gap-3">
+  <div v-if="store.snap" class="space-y-4 lg:space-y-8">
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <button
         v-for="s in store.snap.services"
         :key="s.id"
-        class="surface p-5 text-left transition hover:bg-panel-2"
+        class="surface min-w-0 p-4 text-left transition hover:bg-panel-2 lg:p-5"
         :disabled="store.busy"
         @click="toggle(s.id, s.running)"
       >
-        <div class="mb-8 flex items-center justify-between">
-          <div class="text-xs text-muted">{{ s.port ? `:${s.port}` : "—" }}</div>
+        <div class="mb-4 flex items-center justify-between gap-2 lg:mb-8">
+          <div class="shrink-0 text-xs text-muted">{{ s.port ? `:${s.port}` : "—" }}</div>
           <StatusPill :on="s.running" />
         </div>
-        <div class="text-lg font-medium">{{ names[s.id] ?? s.name }}</div>
+        <div class="truncate text-base font-medium lg:text-lg">{{ names[s.id] ?? s.name }}</div>
         <div class="mt-1 truncate text-xs text-muted">{{ s.version }}</div>
       </button>
     </section>
 
-    <section class="grid grid-cols-[1.4fr_1fr] gap-3">
-      <div class="surface p-6">
+    <section class="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
+      <div class="surface p-4 lg:p-6">
         <div class="text-[11px] uppercase tracking-wider text-muted">сайты</div>
         <p class="mt-2 max-w-md text-sm leading-relaxed text-muted">
           Проекты из <span class="text-text">www</span> открываются как
@@ -84,15 +84,16 @@ async function toggle(id: string, running: boolean) {
         <RouterLink to="/projects" class="text-xs text-muted hover:text-text">все</RouterLink>
       </div>
       <div v-if="!store.snap.projects.length" class="text-sm text-muted">Пока пусто.</div>
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <button
           v-for="p in store.snap.projects.slice(0, 6)"
           :key="p.name"
-          class="surface p-4 text-left hover:bg-panel-2"
+          class="surface min-w-0 p-4 text-left hover:bg-panel-2"
           @click="store.openUrl(p.url)"
         >
           <div class="font-medium">{{ p.name }}</div>
           <div class="mt-1 truncate text-xs text-muted">{{ p.url.replace("http://", "") }}</div>
+          <div class="mt-2 text-[10px] uppercase tracking-wider text-muted">{{ p.kind }}</div>
         </button>
       </div>
     </section>

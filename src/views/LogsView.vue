@@ -31,8 +31,8 @@ watch(which, load);
 </script>
 
 <template>
-  <div class="flex h-full min-h-[560px] flex-col gap-4">
-    <div class="flex items-center gap-1">
+  <div class="flex h-full min-h-0 flex-col gap-3 overflow-hidden lg:gap-4">
+    <div class="flex flex-wrap items-center gap-1">
       <button
         v-for="tab in tabs"
         :key="tab.id"
