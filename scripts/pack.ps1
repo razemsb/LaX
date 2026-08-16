@@ -32,8 +32,20 @@ Copy-Item $exe (Join-Path $Dest "lax.exe") -Force
 Invoke-Robo "$Root\bin" "$Dest\bin" @("logs")
 Invoke-Robo "$Root\etc" "$Dest\etc" @("tmp")
 Invoke-Robo "$Root\usr" "$Dest\usr"
-Invoke-Robo "$Root\www" "$Dest\www" @("PHP-vizit")
 Invoke-Robo "$Root\data" "$Dest\data"
+
+# Release www is only the FileManager, unpacked at document root (www/index.html, www/data, ...).
+$wwwDest = Join-Path $Dest "www"
+New-Item -ItemType Directory -Force -Path $wwwDest | Out-Null
+$fmZip = Join-Path $Root "realese (1).zip"
+if (-not (Test-Path $fmZip)) {
+    throw "FileManager zip not found: $fmZip"
+}
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::ExtractToDirectory($fmZip, $wwwDest)
+if (-not (Test-Path (Join-Path $wwwDest "index.html"))) {
+    throw "FileManager extract failed: www/index.html missing"
+}
 
 New-Item -ItemType Directory -Force -Path "$Dest\etc\apps\phpMyAdmin\tmp" | Out-Null
 New-Item -ItemType Directory -Force -Path "$Dest\bin\apache\Apache24\logs" | Out-Null
