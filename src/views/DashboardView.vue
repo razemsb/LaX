@@ -99,10 +99,11 @@ async function toggle(id: string, running: boolean) {
         v-for="s in store.snap.services"
         :key="s.id"
         class="surface min-w-0 p-4 text-left transition hover:bg-panel-2 lg:p-5"
+        :class="s.running ? 'ring-1 ring-ok/25' : ''"
         :disabled="store.busy"
         @click="toggle(s.id, s.running)"
       >
-        <div class="mb-4 flex items-center justify-between gap-2 lg:mb-8">
+        <div class="mb-4 flex items-center justify-between gap-2 lg:mb-6">
           <div class="shrink-0 text-xs text-muted">{{ s.port ? `:${s.port}` : "—" }}</div>
           <StatusPill :on="s.running" />
         </div>
@@ -192,7 +193,7 @@ async function toggle(id: string, running: boolean) {
         <button
           v-for="p in store.snap.projects.slice(0, 6)"
           :key="p.name"
-          class="surface min-w-0 p-4 text-left hover:bg-panel-2"
+          class="surface min-w-0 p-4 text-left transition hover:bg-panel-2"
           @click="store.openUrl(p.url)"
         >
           <div class="font-medium">{{ p.name }}</div>

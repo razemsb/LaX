@@ -8,6 +8,7 @@ export const useAppStore = defineStore("app", {
     loading: false,
     busy: false,
     error: "" as string,
+    dismissedPort: "" as string,
   }),
   getters: {
     runningCount: (s) => s.snap?.services.filter((x) => x.running).length ?? 0,
@@ -149,11 +150,20 @@ export const useAppStore = defineStore("app", {
         this.busy = false;
       }
     },
-    async dismissUpdate() {
+    clearError() {
+      this.error = "";
+    },
+    async dismissNotice(which: "message" | "update" | "port") {
+      if (which === "port" && this.snap?.portConflict) {
+        this.dismissedPort = `${this.snap.portConflict.port}:${this.snap.portConflict.pid}`;
+      }
       try {
-        this.snap = await invoke<Snapshot>("dismiss_update");
+        this.snap = await invoke<Snapshot>("dismiss_notice", { which });
       } catch {
-        /* ignore */
+        if (!this.snap) return;
+        if (which === "update") this.snap.update = null;
+        if (which === "message") this.snap.message = null;
+        if (which === "port") this.snap.portConflict = null;
       }
     },
     async run(cmd: string, args: Record<string, unknown> = {}) {
@@ -161,6 +171,7 @@ export const useAppStore = defineStore("app", {
       this.error = "";
       try {
         this.snap = await invoke<Snapshot>(cmd, args);
+        this.dismissedPort = "";
       } catch (e) {
         this.error = String(e);
         try {

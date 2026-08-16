@@ -166,6 +166,7 @@ pub fn run() {
             commands::check_update,
             commands::apply_update,
             commands::dismiss_update,
+            commands::dismiss_notice,
         ])
         .run(tauri::generate_context!())
         .expect("error while running LaX");

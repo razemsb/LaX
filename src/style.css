@@ -38,6 +38,9 @@ body {
   border: 1px solid var(--color-line);
   border-radius: 14px;
 }
+button.surface:hover:not(:disabled) {
+  border-color: #3a3a40;
+}
 
 .btn-accent {
   background: #e02430;

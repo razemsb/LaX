@@ -276,8 +276,21 @@ pub fn apply_update(app: AppHandle, state: State<AppState>) -> Result<(), String
 
 #[tauri::command]
 pub fn dismiss_update(state: State<AppState>) -> Result<Snapshot, String> {
+    dismiss_notice(state, "update".into())
+}
+
+#[tauri::command]
+pub fn dismiss_notice(state: State<AppState>, which: String) -> Result<Snapshot, String> {
     with_state(&state, |o| {
-        o.update = None;
+        match which.as_str() {
+            "update" => o.update = None,
+            "message" => o.last_message = None,
+            "port" => o.port_conflict = None,
+            _ => {
+                o.update = None;
+                o.last_message = None;
+            }
+        }
         Ok(o.snapshot())
     })
 }
