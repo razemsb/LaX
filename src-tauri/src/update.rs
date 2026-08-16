@@ -1,10 +1,11 @@
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter};
 
 use crate::error::{LaxError, LaxResult};
 
@@ -108,7 +109,15 @@ fn pick_asset(assets: &[GhAsset]) -> Option<&GhAsset> {
     }
 }
 
-pub fn download_asset(root: &Path, info: &UpdateInfo) -> LaxResult<PathBuf> {
+pub fn emit_progress(app: &AppHandle, msg: &str) {
+    let _ = app.emit("update-progress", msg);
+}
+
+pub fn download_asset(
+    root: &Path,
+    info: &UpdateInfo,
+    mut progress: impl FnMut(&str),
+) -> LaxResult<PathBuf> {
     let url = info
         .download_url
         .as_deref()
@@ -119,29 +128,36 @@ pub fn download_asset(root: &Path, info: &UpdateInfo) -> LaxResult<PathBuf> {
         .unwrap_or("LaX-update.bin");
     fs::create_dir_all(root.join("tmp"))?;
     let dest = root.join("tmp").join(name);
-    download(url, &dest)?;
+    progress("скачиваю обновление…");
+    download(url, &dest, &mut progress)?;
+    progress("скачано, готовлю файлы…");
     Ok(dest)
 }
 
-pub fn install_asset(root: &Path, dest: &Path) -> LaxResult<()> {
+pub fn install_asset(
+    root: &Path,
+    dest: &Path,
+    mut progress: impl FnMut(&str),
+) -> LaxResult<()> {
     let name = dest
         .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("")
         .to_ascii_lowercase();
     if name.ends_with(".appimage") {
+        progress("ставлю AppImage…");
         install_appimage(dest)?;
         return Ok(());
     }
     if name.ends_with(".zip") {
-        install_zip(root, dest)?;
+        install_zip(root, dest, &mut progress)?;
         let _ = fs::remove_file(dest);
         return Ok(());
     }
     Err(LaxError::msg("неизвестный формат обновления"))
 }
 
-fn download(url: &str, dest: &Path) -> LaxResult<()> {
+fn download(url: &str, dest: &Path, progress: &mut impl FnMut(&str)) -> LaxResult<()> {
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(20))
         .timeout(Duration::from_secs(600))
@@ -151,55 +167,143 @@ fn download(url: &str, dest: &Path) -> LaxResult<()> {
         .get(url)
         .call()
         .map_err(|e| LaxError::msg(format!("скачивание: {e}")))?;
+    let total = resp
+        .header("Content-Length")
+        .and_then(|s| s.parse::<u64>().ok())
+        .filter(|n| *n > 0);
     let mut reader = resp.into_reader();
-    let mut file = fs::File::create(dest)?;
-    io::copy(&mut reader, &mut file)?;
-    file.flush()?;
-    Ok(())
-}
-
-fn install_zip(root: &Path, zip_path: &Path) -> LaxResult<()> {
-    let unpack = root.join("tmp").join("lax-update-unpack");
-    if unpack.exists() {
-        fs::remove_dir_all(&unpack)?;
+    let tmp = dest.with_extension("part");
+    let mut file = fs::File::create(&tmp)?;
+    let mut buf = [0u8; 64 * 1024];
+    let mut copied: u64 = 0;
+    let mut last_pct = 101u64;
+    loop {
+        let n = reader.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        file.write_all(&buf[..n])?;
+        copied += n as u64;
+        if let Some(total) = total {
+            let pct = copied.saturating_mul(100) / total;
+            if pct != last_pct {
+                last_pct = pct;
+                progress(&format!("скачиваю {pct}%"));
+            }
+        }
     }
-    fs::create_dir_all(&unpack)?;
-    extract_zip(zip_path, &unpack)?;
-    let src = unpack_root(&unpack);
-    copy_filtered(&src, root, Path::new(""))?;
-    let _ = fs::remove_dir_all(&unpack);
+    file.flush()?;
+    drop(file);
+    if dest.exists() {
+        let _ = fs::remove_file(dest);
+    }
+    fs::rename(&tmp, dest)?;
     Ok(())
 }
 
-fn extract_zip(zip_path: &Path, dest: &Path) -> LaxResult<()> {
+fn install_zip(root: &Path, zip_path: &Path, progress: &mut impl FnMut(&str)) -> LaxResult<()> {
+    progress("распаковываю…");
     let file = fs::File::open(zip_path)?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| LaxError::msg(e.to_string()))?;
-    archive
-        .extract(dest)
-        .map_err(|e| LaxError::msg(format!("распаковка: {e}")))?;
+    let prefix = zip_prefix(&mut archive);
+    let total = archive.len().max(1);
+    let mut written = 0u32;
+    let mut skipped = 0u32;
+    for i in 0..archive.len() {
+        if i % 80 == 0 {
+            progress(&format!("раскладываю файлы… {}%", i * 100 / total));
+        }
+        let mut entry = archive
+            .by_index(i)
+            .map_err(|e| LaxError::msg(e.to_string()))?;
+        if entry.is_dir() {
+            continue;
+        }
+        let Some(rel) = zip_rel(entry.name(), prefix.as_deref()) else {
+            continue;
+        };
+        if skip_rel(&rel) {
+            continue;
+        }
+        let dest = if is_self_exe(&rel) {
+            root.join(if cfg!(windows) {
+                "lax.exe.new"
+            } else {
+                "lax.new"
+            })
+        } else {
+            root.join(&rel)
+        };
+        if !is_self_exe(&rel) && dest.is_file() {
+            if let Ok(meta) = dest.metadata() {
+                if meta.len() == entry.size() {
+                    skipped += 1;
+                    continue;
+                }
+            }
+        }
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let mut out = fs::File::create(&dest)?;
+        io::copy(&mut entry, &mut out)?;
+        written += 1;
+    }
+    progress(&format!("готово · новых файлов {written}, без изменений {skipped}"));
     Ok(())
 }
 
-fn unpack_root(dir: &Path) -> PathBuf {
-    if looks_like_root(dir) {
-        return dir.to_path_buf();
+fn zip_prefix(archive: &mut zip::ZipArchive<fs::File>) -> Option<String> {
+    let mut prefix: Option<String> = None;
+    let n = archive.len().min(24);
+    for i in 0..n {
+        let Ok(entry) = archive.by_index(i) else {
+            continue;
+        };
+        let name = entry.name().replace('\\', "/");
+        let first = name.split('/').next().unwrap_or("");
+        if first.is_empty() {
+            return None;
+        }
+        let lower = first.to_ascii_lowercase();
+        if matches!(
+            lower.as_str(),
+            "lax.exe" | "lax" | "bin" | "www" | "etc" | "usr" | "data" | "tmp" | "logs"
+        ) {
+            return None;
+        }
+        match &prefix {
+            None => prefix = Some(first.to_string()),
+            Some(p) if p != first => return None,
+            _ => {}
+        }
     }
-    let kids: Vec<PathBuf> = fs::read_dir(dir)
-        .into_iter()
-        .flatten()
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.is_dir())
-        .collect();
-    if kids.len() == 1 && looks_like_root(&kids[0]) {
-        kids[0].clone()
-    } else {
-        dir.to_path_buf()
-    }
+    prefix
 }
 
-fn looks_like_root(dir: &Path) -> bool {
-    dir.join("lax.exe").exists() || dir.join("lax").exists() || dir.join("bin").is_dir()
+fn zip_rel(name: &str, prefix: Option<&str>) -> Option<PathBuf> {
+    let name = name.replace('\\', "/").trim_matches('/').to_string();
+    if name.is_empty() {
+        return None;
+    }
+    let rest = if let Some(prefix) = prefix {
+        name.strip_prefix(&format!("{prefix}/"))
+            .unwrap_or(&name)
+            .to_string()
+    } else {
+        name
+    };
+    if rest.is_empty() {
+        return None;
+    }
+    let path = PathBuf::from(&rest);
+    if path
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir | std::path::Component::Prefix(_)))
+    {
+        return None;
+    }
+    Some(path)
 }
 
 fn skip_rel(rel: &Path) -> bool {
@@ -238,41 +342,6 @@ fn is_self_exe(rel: &Path) -> bool {
         .unwrap_or("")
         .to_ascii_lowercase();
     name == "lax.exe" || name == "lax"
-}
-
-fn copy_filtered(src_root: &Path, dst_root: &Path, rel: &Path) -> LaxResult<()> {
-    if skip_rel(rel) {
-        return Ok(());
-    }
-    let from = src_root.join(rel);
-    if from.is_dir() {
-        if !rel.as_os_str().is_empty() {
-            fs::create_dir_all(dst_root.join(rel))?;
-        }
-        for ent in fs::read_dir(&from)? {
-            let ent = ent?;
-            copy_filtered(src_root, dst_root, &rel.join(ent.file_name()))?;
-        }
-        return Ok(());
-    }
-    if !from.is_file() {
-        return Ok(());
-    }
-    if is_self_exe(rel) {
-        let staged = dst_root.join(if cfg!(windows) {
-            "lax.exe.new"
-        } else {
-            "lax.new"
-        });
-        fs::copy(&from, staged)?;
-        return Ok(());
-    }
-    let to = dst_root.join(rel);
-    if let Some(parent) = to.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    fs::copy(&from, to)?;
-    Ok(())
 }
 
 fn appimage_path() -> Option<PathBuf> {
@@ -328,27 +397,31 @@ fn spawn_relaunch_windows(root: &Path) -> LaxResult<()> {
     let script = root.join("tmp").join("lax-relaunch.cmd");
     let body = format!(
         "@echo off\r\n\
+set n=0\r\n\
 :wait\r\n\
+if %n% geq 15 goto kill\r\n\
 ping -n 2 127.0.0.1 >nul\r\n\
 tasklist /FI \"IMAGENAME eq lax.exe\" | find /I \"lax.exe\" >nul\r\n\
-if not errorlevel 1 goto wait\r\n\
+if not errorlevel 1 (\r\n\
+  set /a n+=1\r\n\
+  goto wait\r\n\
+)\r\n\
+goto copy\r\n\
+:kill\r\n\
+taskkill /F /IM lax.exe /T >nul 2>&1\r\n\
+ping -n 2 127.0.0.1 >nul\r\n\
+:copy\r\n\
 copy /Y \"{staged}\" \"{exe}\" >nul\r\n\
-del \"{staged}\" >nul\r\n\
+del \"{staged}\" >nul 2>&1\r\n\
 start \"\" \"{exe}\"\r\n\
 del \"%~f0\"\r\n",
         staged = staged.display(),
         exe = exe.display()
     );
     fs::write(&script, body)?;
-    let mut cmd = Command::new("cmd.exe");
-    cmd.args(["/C", &script.to_string_lossy()]);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        const DETACHED: u32 = 0x0000_0008 | 0x0000_0200 | 0x0800_0000 | 0x0100_0000;
-        cmd.creation_flags(DETACHED);
-    }
-    cmd.spawn()
+    Command::new("cmd.exe")
+        .args(["/C", "start", "", "/min", "cmd.exe", "/C", &script.to_string_lossy()])
+        .spawn()
         .map_err(|e| LaxError::msg(format!("relaunch: {e}")))?;
     Ok(())
 }

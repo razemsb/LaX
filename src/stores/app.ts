@@ -9,6 +9,7 @@ export const useAppStore = defineStore("app", {
     busy: false,
     error: "" as string,
     dismissedPort: "" as string,
+    updateProgress: "" as string,
   }),
   getters: {
     runningCount: (s) => s.snap?.services.filter((x) => x.running).length ?? 0,
@@ -139,6 +140,7 @@ export const useAppStore = defineStore("app", {
     async applyUpdate() {
       this.busy = true;
       this.error = "";
+      this.updateProgress = "скачиваю обновление…";
       try {
         await invoke("apply_update");
         await this.refresh();
@@ -148,6 +150,7 @@ export const useAppStore = defineStore("app", {
         this.error = msg;
       } finally {
         this.busy = false;
+        this.updateProgress = "";
       }
     },
     clearError() {

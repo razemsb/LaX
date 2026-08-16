@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from "vue";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 import {
   Blocks,
@@ -17,6 +18,7 @@ import Banner from "@/components/Banner.vue";
 const store = useAppStore();
 const route = useRoute();
 let timer: number | undefined;
+let unlistenProgress: UnlistenFn | undefined;
 
 const links = [
   { to: "/", label: "Обзор", icon: Gauge },
@@ -40,10 +42,16 @@ const showPort = computed(() => {
 
 onMounted(async () => {
   await store.refresh();
-  timer = window.setInterval(() => store.refreshStatus(), 4000);
+  unlistenProgress = await listen<string>("update-progress", (e) => {
+    store.updateProgress = e.payload;
+  });
+  timer = window.setInterval(() => {
+    if (!store.busy) store.refreshStatus();
+  }, 4000);
 });
 onUnmounted(() => {
   if (timer) window.clearInterval(timer);
+  if (unlistenProgress) unlistenProgress();
 });
 </script>
 
@@ -123,7 +131,9 @@ onUnmounted(() => {
           <span v-if="store.snap.update.size" class="text-muted">
             · {{ Math.round(store.snap.update.size / 1024 / 1024) }} МБ
           </span>
-          <div v-if="store.snap.update.notes" class="mt-1 truncate text-xs text-muted">{{ store.snap.update.notes }}</div>
+          <div class="mt-1 truncate text-xs text-muted">
+            {{ store.updateProgress || store.snap.update.notes }}
+          </div>
         </div>
         <template #actions>
           <button class="btn-ghost rounded-lg px-3 py-1.5 text-sm" @click="store.openUrl(store.snap.update.url)">релиз</button>
@@ -133,7 +143,7 @@ onUnmounted(() => {
             :disabled="store.busy"
             @click="store.applyUpdate()"
           >
-            {{ store.busy ? "качаю…" : "Обновить" }}
+            {{ store.updateProgress || (store.busy ? "обновляю…" : "Обновить") }}
           </button>
         </template>
       </Banner>

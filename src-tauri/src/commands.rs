@@ -247,25 +247,52 @@ pub fn check_update(state: State<AppState>) -> Result<Snapshot, String> {
 }
 
 #[tauri::command]
-pub fn apply_update(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+pub async fn apply_update(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     let (root, info) = with_state(&state, |o| {
         let info = o
             .update
             .clone()
             .ok_or_else(|| "нет обновления".to_string())?;
-        o.last_message = Some("скачиваю обновление… сайты и базы не трогаю".into());
+        o.last_message = Some("скачиваю обновление…".into());
         Ok((o.paths.root.clone(), info))
     })?;
-    let dest = crate::update::download_asset(&root, &info).map_err(|e| e.to_string())?;
+
+    crate::update::emit_progress(&app, "скачиваю обновление…");
+    let app_dl = app.clone();
+    let root_dl = root.clone();
+    let info_dl = info.clone();
+    let dest = tokio::task::spawn_blocking(move || {
+        crate::update::download_asset(&root_dl, &info_dl, |m| {
+            crate::update::emit_progress(&app_dl, m);
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+
+    crate::update::emit_progress(&app, "останавливаю стек…");
     with_state(&state, |o| {
         o.stop_all();
         Ok(())
     })?;
-    crate::update::install_asset(&root, &dest).map_err(|e| e.to_string())?;
+
+    crate::update::emit_progress(&app, "раскладываю файлы…");
+    let app_ins = app.clone();
+    let root_ins = root.clone();
+    tokio::task::spawn_blocking(move || {
+        crate::update::install_asset(&root_ins, &dest, |m| {
+            crate::update::emit_progress(&app_ins, m);
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+
     if crate::update::has_staged_exe(&root) {
+        crate::update::emit_progress(&app, "перезапускаю LaX…");
         crate::update::spawn_relaunch(&root).map_err(|e| e.to_string())?;
-        app.exit(0);
-        return Ok(());
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        std::process::exit(0);
     }
     with_state(&state, |o| {
         o.update = None;
