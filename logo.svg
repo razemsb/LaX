@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">phptrash</title>
+  <desc id="desc">Логотип phptrash — P на чёрном low-poly с красным акцентом</desc>
+
+  <defs>
+    <clipPath id="squircle">
+      <rect width="512" height="512" rx="112" ry="112"/>
+    </clipPath>
+
+    <filter id="letterSoft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <rect width="512" height="512" fill="#050505"/>
+
+    <!-- charcoal facets -->
+    <polygon points="0,0 512,0 512,140 280,200 0,80" fill="#141414"/>
+    <polygon points="0,80 280,200 180,320 0,260" fill="#1A1A1A"/>
+    <polygon points="0,260 180,320 120,512 0,512" fill="#0E0E0E"/>
+    <polygon points="512,140 512,340 340,380 280,200" fill="#121212"/>
+    <polygon points="280,200 340,380 200,440 180,320" fill="#181818"/>
+    <polygon points="180,320 200,440 80,512 120,512" fill="#101010"/>
+    <polygon points="340,380 512,340 512,512 200,440" fill="#161616"/>
+    <polygon points="512,0 512,140 280,200 380,60" fill="#1C1C1C"/>
+    <polygon points="200,440 512,512 512,340 340,380" fill="#0C0C0C"/>
+    <polygon points="120,512 200,440 340,380 280,512" fill="#141414"/>
+
+    <!-- red accent facets -->
+    <polygon points="380,60 280,200 340,380 480,280" fill="#C41E2A"/>
+    <polygon points="280,200 340,380 200,440 180,320" fill="#8B1520" opacity="0.55"/>
+    <polygon points="512,140 380,60 480,280 512,340" fill="#E02430" opacity="0.75"/>
+
+    <!-- soft edge lines -->
+    <g stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2" stroke-linejoin="round">
+      <polygon points="0,0 512,0 512,140 280,200 0,80" fill="none"/>
+      <polygon points="280,200 340,380 200,440 180,320" fill="none"/>
+      <polygon points="340,380 512,340 512,512 200,440" fill="none"/>
+      <polygon points="380,60 280,200 340,380 480,280" fill="none"/>
+    </g>
+
+    <!--
+      Optically centered P (bbox ~148–378 x, 92–420 y).
+      Stem edge is a single vertical at x=222.
+    -->
+    <path
+      filter="url(#letterSoft)"
+      fill="#FFFFFF"
+      fill-rule="evenodd"
+      d="
+        M148 92
+        H222
+        C338 92 398 154 398 232
+        C398 310 338 372 222 372
+        V420
+        H148
+        V92
+        Z
+
+        M222 158
+        V306
+        C292 306 328 276 328 232
+        C328 188 292 158 222 158
+        Z
+      "
+    />
+  </g>
+</svg>

@@ -1,0 +1,17 @@
+documentRoot = "www"
+tld = "localhost"
+autoVhost = false
+webServer = "apache"
+apachePort = 80
+nginxPort = 80
+mysqlPort = 3306
+phpVersion = "php-trash-8.2"
+mysqlVersion = "mariadb-10.11.13"
+nginxVersion = "nginx-1.14.0"
+apacheVersion = "Apache24"
+phpCgiPorts = [
+    9003,
+    9004,
+]
+autoStart = false
+mysqlEnabled = true

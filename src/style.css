@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./assets/fonts/JetBrainsMono-Variable.ttf") format("truetype");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --color-ink: #0c0c0d;
+  --color-panel: #141416;
+  --color-panel-2: #1a1a1d;
+  --color-line: #2a2a2e;
+  --color-muted: #8a8a90;
+  --color-text: #f2f2f3;
+  --color-accent: #e02430;
+  --color-ok: #3dd68c;
+  --color-warn: #d4b45a;
+  --color-err: #e02430;
+}
+
+html, body, #app { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+.surface {
+  background: var(--color-panel);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+
+.btn-accent {
+  background: #e02430;
+  color: #fff;
+}
+.btn-accent:hover:not(:disabled) { background: #c41e2a; }
+.btn-accent:disabled { opacity: .4; }
+
+.btn-ghost {
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+  background: transparent;
+}
+.btn-ghost:hover:not(:disabled) {
+  color: var(--color-text);
+  background: var(--color-panel-2);
+}
+
+.nav-item {
+  color: var(--color-muted);
+}
+.nav-item:hover { color: var(--color-text); background: #161618; }
+.nav-active {
+  color: #fff;
+  background: #1b1b1e;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--color-line);
+  background: var(--color-ink);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  color: var(--color-text);
+}
+.field:focus { border-color: #4a4a50; }
+
+.scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar::-webkit-scrollbar-thumb { background: #2e2e32; border-radius: 99px; }
+.scrollbar::-webkit-scrollbar-track { background: transparent; }
+
+.log-info { color: #8f8f96; }
+.log-notice { color: #d0d0d4; }
+.log-warn { color: #d4b45a; }
+.log-err { color: #e02430; }
+
+.spin { animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+input, select, textarea, button { font-family: inherit; }
