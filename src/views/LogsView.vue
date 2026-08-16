@@ -10,6 +10,7 @@ const tabs = [
   { id: "nginx", label: "Nginx" },
   { id: "mariadb", label: "MariaDB" },
   { id: "php", label: "PHP" },
+  { id: "mailpit", label: "Mailpit" },
 ];
 
 const lines = computed(() => body.value.split(/\r?\n/));

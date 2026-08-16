@@ -46,7 +46,56 @@ pub fn apply_php(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
     write_file(&paths.root.join("etc/nginx/php_upstream.conf"), &upstream)?;
 
     patch_httpd_includes(paths, cfg)?;
+    patch_mail_ini(paths, cfg)?;
     Ok(())
+}
+
+fn patch_mail_ini(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
+    let ini = php_ini_path(paths, cfg);
+    if !ini.exists() {
+        return Ok(());
+    }
+    let text = fs::read_to_string(&ini)?;
+    let mut next = set_ini_value(&text, "SMTP", "127.0.0.1");
+    next = set_ini_value(&next, "smtp_port", "1025");
+    next = set_ini_value(&next, "sendmail_from", "lax@localhost");
+    if next != text {
+        fs::write(ini, next)?;
+    }
+    Ok(())
+}
+
+fn set_ini_value(text: &str, key: &str, value: &str) -> String {
+    let want = key.to_ascii_lowercase();
+    let mut found = false;
+    let mut out = String::with_capacity(text.len() + 32);
+    for line in text.lines() {
+        if ini_key(line).as_deref() == Some(want.as_str()) {
+            if !found {
+                out.push_str(&format!("{key} = {value}\n"));
+                found = true;
+            }
+            continue;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    if !found {
+        out.push_str(&format!("\n{key} = {value}\n"));
+    }
+    out
+}
+
+fn ini_key(line: &str) -> Option<String> {
+    let t = line.trim();
+    let t = t.strip_prefix(';').unwrap_or(t).trim();
+    let (k, _) = t.split_once('=')?;
+    let k = k.trim();
+    if k.is_empty() {
+        None
+    } else {
+        Some(k.to_ascii_lowercase())
+    }
 }
 
 fn patch_httpd_includes(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {

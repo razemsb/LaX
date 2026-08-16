@@ -114,7 +114,7 @@ pub fn open_vscode(path: &Path) -> Result<(), String> {
     }
 }
 
-pub fn open_terminal(dir: &Path, cmdline: Option<&str>, extra_path: Option<&Path>) -> Result<(), String> {
+pub fn open_terminal(dir: &Path, cmdline: Option<&str>, path_prefix: Option<&str>) -> Result<(), String> {
     if !dir.exists() {
         return Err(format!("path not found: {}", dir.display()));
     }
@@ -127,10 +127,7 @@ pub fn open_terminal(dir: &Path, cmdline: Option<&str>, extra_path: Option<&Path
             cmd.arg("/K");
         }
         cmd.current_dir(dir).creation_flags(CREATE_NEW_CONSOLE);
-        if let Some(bin) = extra_path {
-            let rest = std::env::var("PATH").unwrap_or_default();
-            cmd.env("PATH", format!("{}{}{rest}", bin.display(), path_sep()));
-        }
+        apply_path_prefix(&mut cmd, path_prefix);
         cmd.spawn().map_err(|e| e.to_string())?;
         return Ok(());
     }
@@ -143,21 +140,27 @@ pub fn open_terminal(dir: &Path, cmdline: Option<&str>, extra_path: Option<&Path
         };
         let mut cmd = Command::new("x-terminal-emulator");
         cmd.args(["-e", &shell, "-lc", &run]).current_dir(dir);
-        if let Some(bin) = extra_path {
-            let rest = std::env::var("PATH").unwrap_or_default();
-            cmd.env("PATH", format!("{}{}{rest}", bin.display(), path_sep()));
-        }
+        apply_path_prefix(&mut cmd, path_prefix);
         match cmd.spawn() {
             Ok(_) => Ok(()),
             Err(_) => {
-                Command::new(&shell)
-                    .arg("-lc")
-                    .arg(&run)
-                    .current_dir(dir)
+                let mut fallback = Command::new(&shell);
+                fallback.arg("-lc").arg(&run).current_dir(dir);
+                apply_path_prefix(&mut fallback, path_prefix);
+                fallback
                     .spawn()
                     .map(|_| ())
                     .map_err(|e| e.to_string())
             }
+        }
+    }
+}
+
+fn apply_path_prefix(cmd: &mut Command, path_prefix: Option<&str>) {
+    if let Some(prefix) = path_prefix {
+        if !prefix.is_empty() {
+            let rest = std::env::var("PATH").unwrap_or_default();
+            cmd.env("PATH", format!("{prefix}{}{rest}", path_sep()));
         }
     }
 }

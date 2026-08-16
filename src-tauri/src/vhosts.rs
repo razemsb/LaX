@@ -16,6 +16,34 @@ pub fn regenerate(paths: &Paths, cfg: &LaxConfig, _projects: &[ProjectInfo]) -> 
     clear_auto(&nginx_dir)?;
     write_defaults(paths, cfg)?;
     write_phpmyadmin(paths)?;
+    patch_apache_listen(paths, cfg)?;
+    Ok(())
+}
+
+fn patch_apache_listen(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
+    let httpd = paths.apache_dir(cfg).join("conf").join("httpd.conf");
+    if !httpd.exists() {
+        return Ok(());
+    }
+    let body = fs::read_to_string(&httpd)?;
+    let mut out = String::new();
+    let mut done = false;
+    for line in body.lines() {
+        let t = line.trim_start();
+        if t.starts_with("Listen ") && !t.contains("443") {
+            if !done {
+                out.push_str(&format!("Listen {}\n", cfg.apache_port));
+                done = true;
+            }
+            continue;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    if !done {
+        out.push_str(&format!("\nListen {}\n", cfg.apache_port));
+    }
+    fs::write(httpd, out)?;
     Ok(())
 }
 

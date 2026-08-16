@@ -57,7 +57,7 @@ impl Default for LaxConfig {
             apache_port: 80,
             nginx_port: 80,
             mysql_port: 3306,
-            php_version: "php-dlya-debilov".into(),
+            php_version: "php-trash-8.2".into(),
             mysql_version: "mariadb-10.11.13".into(),
             nginx_version: "nginx-1.14.0".into(),
             apache_version: "Apache24".into(),

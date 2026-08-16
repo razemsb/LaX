@@ -70,6 +70,10 @@ async function create() {
     <p v-if="!store.snap.projects.length" class="text-sm text-muted">
       Папка www пустая. Проект откроется как http://localhost/имя/
     </p>
+    <p v-else-if="!store.snap.nodeAvailable" class="text-sm text-muted">
+      Свой Node не найден в bin/node — npm-кнопки возьмут системный, если он есть.
+      Положи туда node.exe или запусти <span class="text-text">npm run fetch-tools</span>.
+    </p>
 
     <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
       <article v-for="p in store.snap.projects" :key="p.name" class="surface min-w-0 p-4 lg:p-5">

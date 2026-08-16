@@ -45,6 +45,22 @@ export interface PhpExtension {
   kind: string;
 }
 
+export interface PortConflict {
+  port: number;
+  pid: number;
+  process: string;
+}
+
+export interface UpdateInfo {
+  version: string;
+  tag: string;
+  url: string;
+  notes: string;
+  downloadUrl: string | null;
+  downloadName: string | null;
+  size: number | null;
+}
+
 export interface Snapshot {
   root: string;
   config: LaxConfig;
@@ -56,4 +72,12 @@ export interface Snapshot {
   apacheVersions: string[];
   hostsWritable: boolean;
   message: string | null;
+  portConflict: PortConflict | null;
+  nodeAvailable: boolean;
+  mailpitAvailable: boolean;
+  appVersion: string;
+  repoUrl: string;
+  issuesUrl: string;
+  feedbackUrl: string;
+  update: UpdateInfo | null;
 }

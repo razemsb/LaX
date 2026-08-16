@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
-import type { LaxConfig, PhpExtension, ProjectInfo, ServiceInfo, Snapshot } from "@/types";
+import type { LaxConfig, PhpExtension, ProjectInfo, Snapshot } from "@/types";
 
 export const useAppStore = defineStore("app", {
   state: () => ({
@@ -28,10 +28,8 @@ export const useAppStore = defineStore("app", {
       }
     },
     async refreshStatus() {
-      if (!this.snap) return;
       try {
-        const services = await invoke<ServiceInfo[]>("status");
-        this.snap.services = services;
+        this.snap = await invoke<Snapshot>("snapshot");
       } catch {
         /* keep last snap */
       }
@@ -104,8 +102,59 @@ export const useAppStore = defineStore("app", {
         throw e;
       }
     },
+    async switchWebPort(port: number) {
+      return this.run("switch_web_port", { port });
+    },
+    async listDatabases() {
+      return invoke<string[]>("list_databases");
+    },
+    async createDatabase(name: string) {
+      this.error = "";
+      try {
+        return await invoke<string[]>("create_database", { name });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
+    async importSql(dbName: string, sql: string) {
+      this.error = "";
+      this.busy = true;
+      try {
+        await invoke("import_sql", { dbName, sql });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      } finally {
+        this.busy = false;
+      }
+    },
     async readLogs(which: string) {
       return invoke<string>("read_logs", { which });
+    },
+    async checkUpdate() {
+      return this.run("check_update");
+    },
+    async applyUpdate() {
+      this.busy = true;
+      this.error = "";
+      try {
+        await invoke("apply_update");
+        await this.refresh();
+      } catch (e) {
+        const msg = String(e);
+        if (/webview|closed|cancelled/i.test(msg)) return;
+        this.error = msg;
+      } finally {
+        this.busy = false;
+      }
+    },
+    async dismissUpdate() {
+      try {
+        this.snap = await invoke<Snapshot>("dismiss_update");
+      } catch {
+        /* ignore */
+      }
     },
     async run(cmd: string, args: Record<string, unknown> = {}) {
       this.busy = true;
@@ -114,6 +163,11 @@ export const useAppStore = defineStore("app", {
         this.snap = await invoke<Snapshot>(cmd, args);
       } catch (e) {
         this.error = String(e);
+        try {
+          this.snap = await invoke<Snapshot>("snapshot");
+        } catch {
+          /* ignore */
+        }
         throw e;
       } finally {
         this.busy = false;

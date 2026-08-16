@@ -33,7 +33,7 @@ pub fn list_projects(paths: &Paths, cfg: &LaxConfig) -> LaxResult<Vec<ProjectInf
             continue;
         }
         let name = ent.file_name().to_string_lossy().into_owned();
-        if name.starts_with('.') {
+        if name.starts_with('.') || is_stack_dir(&name) {
             continue;
         }
         let has_public = document_root_for(&path) != path;
@@ -203,4 +203,21 @@ pub fn is_safe_script(name: &str) -> bool {
         && name
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == ':' || c == '.')
+}
+
+fn is_stack_dir(name: &str) -> bool {
+    matches!(
+        name.to_ascii_lowercase().as_str(),
+        "api"
+            | "assets"
+            | "data"
+            | "vendor"
+            | "node_modules"
+            | "storage"
+            | "tmp"
+            | "cache"
+            | "files"
+            | "uploads"
+            | "cgi-bin"
+    )
 }

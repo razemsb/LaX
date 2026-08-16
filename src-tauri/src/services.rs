@@ -1,3 +1,4 @@
+use std::fs;
 use std::thread;
 use std::time::Duration;
 
@@ -7,6 +8,17 @@ use crate::error::{LaxError, LaxResult};
 use crate::paths::unix;
 use crate::php;
 use crate::process::{run_capture, taskkill_image, ProcessTable};
+
+pub const MAILPIT_SMTP: u16 = 1025;
+pub const MAILPIT_UI: u16 = 8025;
+
+pub fn mailpit_bin(paths: &Paths) -> Option<std::path::PathBuf> {
+    let cands = [
+        crate::platform::bin_path(&paths.root.join("bin").join("mailpit"), "mailpit"),
+        crate::platform::bin_path(&paths.root.join("bin"), "mailpit"),
+    ];
+    cands.into_iter().find(|p| p.exists())
+}
 
 pub fn start_apache(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> LaxResult<u32> {
     php::apply_php(paths, cfg)?;
@@ -102,6 +114,41 @@ pub fn start_php_cgi(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -
 
 pub fn stop_php_cgi(table: &mut ProcessTable) {
     table.stop_prefix("php-cgi");
+}
+
+pub fn start_mailpit(table: &mut ProcessTable, paths: &Paths) -> LaxResult<()> {
+    let Some(bin) = mailpit_bin(paths) else {
+        tracing::warn!("mailpit not found in bin/mailpit — skip");
+        return Ok(());
+    };
+    if port_open(MAILPIT_UI) || port_open(MAILPIT_SMTP) {
+        return Ok(());
+    }
+    fs::create_dir_all(paths.root.join("data"))?;
+    fs::create_dir_all(paths.root.join("logs"))?;
+    let db = paths.root.join("data").join("mailpit.db");
+    let log = paths.root.join("logs").join("mailpit.log");
+    let db_s = db.to_string_lossy().into_owned();
+    let log_s = log.to_string_lossy().into_owned();
+    let args = [
+        "--smtp".to_string(),
+        "0.0.0.0:1025".to_string(),
+        "--listen".to_string(),
+        "0.0.0.0:8025".to_string(),
+        "--smtp-auth-accept-any".to_string(),
+        "--database".to_string(),
+        db_s,
+        "--log-file".to_string(),
+        log_s,
+    ];
+    let refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    table.spawn("mailpit", &bin, &refs, &paths.root, &[])?;
+    Ok(())
+}
+
+pub fn stop_mailpit(table: &mut ProcessTable) {
+    table.stop("mailpit");
+    taskkill_image(&crate::platform::bin("mailpit"));
 }
 
 fn ensure_datadir(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {

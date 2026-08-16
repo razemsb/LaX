@@ -11,7 +11,7 @@ use crate::hosts;
 use crate::php;
 use crate::process::ProcessTable;
 use crate::projects::{self, ProjectInfo};
-use crate::services;
+use crate::services::{self, MAILPIT_SMTP, MAILPIT_UI};
 use crate::vhosts;
 
 #[derive(Clone)]
@@ -36,6 +36,8 @@ impl AppState {
                 config,
                 procs: ProcessTable::default(),
                 last_message: Some("Started with default config".into()),
+                port_conflict: None,
+                update: None,
             })),
         }
     }
@@ -46,6 +48,8 @@ pub struct Orchestrator {
     pub config: LaxConfig,
     pub procs: ProcessTable,
     pub last_message: Option<String>,
+    pub port_conflict: Option<PortConflict>,
+    pub update: Option<crate::update::UpdateInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -62,6 +66,14 @@ pub struct ServiceInfo {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PortConflict {
+    pub port: u16,
+    pub pid: u32,
+    pub process: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Snapshot {
     pub root: String,
     pub config: LaxConfig,
@@ -73,6 +85,14 @@ pub struct Snapshot {
     pub apache_versions: Vec<String>,
     pub hosts_writable: bool,
     pub message: Option<String>,
+    pub port_conflict: Option<PortConflict>,
+    pub node_available: bool,
+    pub mailpit_available: bool,
+    pub app_version: String,
+    pub repo_url: String,
+    pub issues_url: String,
+    pub feedback_url: String,
+    pub update: Option<crate::update::UpdateInfo>,
 }
 
 impl Orchestrator {
@@ -86,6 +106,8 @@ impl Orchestrator {
             config,
             procs: ProcessTable::default(),
             last_message: None,
+            port_conflict: None,
+            update: None,
         })
     }
 
@@ -102,6 +124,14 @@ impl Orchestrator {
             apache_versions: discover::apache_versions(&self.paths.root),
             hosts_writable: hosts::writable(),
             message: self.last_message.clone(),
+            port_conflict: self.port_conflict.clone(),
+            node_available: discover::node_bin_dir(&self.paths.root).is_some(),
+            mailpit_available: services::mailpit_bin(&self.paths).is_some(),
+            app_version: crate::update::APP_VERSION.to_string(),
+            repo_url: crate::update::REPO_URL.to_string(),
+            issues_url: crate::update::ISSUES_URL.to_string(),
+            feedback_url: crate::update::FEEDBACK_URL.to_string(),
+            update: self.update.clone(),
         }
     }
 
@@ -112,6 +142,7 @@ impl Orchestrator {
     fn services(&self) -> Vec<ServiceInfo> {
         let apache_on = self.config.web_server == "apache";
         let nginx_on = self.config.web_server == "nginx";
+        let mailpit = services::mailpit_bin(&self.paths).is_some();
         vec![
             ServiceInfo {
                 id: "apache".into(),
@@ -149,17 +180,59 @@ impl Orchestrator {
                 version: self.config.php_version.clone(),
                 enabled: true,
             },
+            ServiceInfo {
+                id: "mailpit".into(),
+                name: "Mailpit".into(),
+                running: port_open(MAILPIT_UI) || port_open(MAILPIT_SMTP),
+                pid: self.procs.get("mailpit").map(|p| p.pid),
+                port: Some(MAILPIT_UI),
+                version: "SMTP :1025".into(),
+                enabled: mailpit,
+            },
         ]
     }
 
     fn php_running(&self) -> bool {
         if self.config.web_server == "nginx" {
-            self.config
-                .php_cgi_ports
-                .iter()
-                .any(|p| port_open(*p))
+            self.config.php_cgi_ports.iter().any(|p| port_open(*p))
         } else {
             port_open(self.config.apache_port)
+        }
+    }
+
+    fn web_port(&self) -> u16 {
+        if self.config.web_server == "nginx" {
+            self.config.nginx_port
+        } else {
+            self.config.apache_port
+        }
+    }
+
+    fn remember_conflict(&mut self, port: u16) {
+        self.port_conflict = Some(match discover::port_listener(port) {
+            Some((pid, process)) => PortConflict {
+                port,
+                pid,
+                process,
+            },
+            None => PortConflict {
+                port,
+                pid: 0,
+                process: "неизвестно".into(),
+            },
+        });
+    }
+
+    fn fail_port(&mut self, port: u16) -> LaxError {
+        self.remember_conflict(port);
+        match &self.port_conflict {
+            Some(c) if c.pid != 0 => LaxError::msg(format!(
+                "порт {port} занят: {} (PID {})",
+                c.process, c.pid
+            )),
+            _ => LaxError::msg(format!(
+                "порт {port} не открылся. Смотри логи Apache/Nginx."
+            )),
         }
     }
 
@@ -180,6 +253,8 @@ impl Orchestrator {
             services::start_mariadb(&mut self.procs, &self.paths, &self.config)?;
         }
         self.start_web()?;
+        let _ = services::start_mailpit(&mut self.procs, &self.paths);
+        self.port_conflict = None;
         Ok(())
     }
 
@@ -188,29 +263,36 @@ impl Orchestrator {
         services::stop_apache(&mut self.procs);
         services::stop_php_cgi(&mut self.procs);
         services::stop_mariadb(&mut self.procs);
+        services::stop_mailpit(&mut self.procs);
         self.procs.stop_all();
+        self.port_conflict = None;
     }
 
     fn start_web(&mut self) -> LaxResult<()> {
+        let port = self.web_port();
+        let ours = self.procs.get("apache").is_some() || self.procs.get("nginx").is_some();
+        if port_open(port) && !ours {
+            return Err(self.fail_port(port));
+        }
         if self.config.web_server == "nginx" {
             services::stop_apache(&mut self.procs);
-            if !self.config
-                .php_cgi_ports
-                .iter()
-                .any(|p| port_open(*p))
-            {
+            if !self.config.php_cgi_ports.iter().any(|p| port_open(*p)) {
                 services::start_php_cgi(&mut self.procs, &self.paths, &self.config)?;
             }
             if !port_open(self.config.nginx_port) {
                 services::start_nginx(&mut self.procs, &self.paths, &self.config)?;
-                wait_port(self.config.nginx_port, 30)?;
+                if wait_port(self.config.nginx_port, 30).is_err() {
+                    return Err(self.fail_port(self.config.nginx_port));
+                }
             }
         } else {
             services::stop_nginx(&mut self.procs, &self.paths, &self.config);
             services::stop_php_cgi(&mut self.procs);
             if !port_open(self.config.apache_port) {
                 services::start_apache(&mut self.procs, &self.paths, &self.config)?;
-                wait_port(self.config.apache_port, 30)?;
+                if wait_port(self.config.apache_port, 30).is_err() {
+                    return Err(self.fail_port(self.config.apache_port));
+                }
             }
         }
         Ok(())
@@ -241,6 +323,14 @@ impl Orchestrator {
                     self.start_web()?;
                 }
             }
+            "mailpit" => {
+                if services::mailpit_bin(&self.paths).is_none() {
+                    return Err(LaxError::msg(
+                        "Mailpit не найден. Запусти scripts/fetch-tools.ps1 — бинарник появится в bin/mailpit",
+                    ));
+                }
+                services::start_mailpit(&mut self.procs, &self.paths)?;
+            }
             other => return Err(LaxError::msg(format!("unknown service {other}"))),
         }
         Ok(())
@@ -257,6 +347,7 @@ impl Orchestrator {
                     services::stop_apache(&mut self.procs);
                 }
             }
+            "mailpit" => services::stop_mailpit(&mut self.procs),
             other => return Err(LaxError::msg(format!("unknown service {other}"))),
         }
         Ok(())
@@ -282,6 +373,17 @@ impl Orchestrator {
             self.start_web()?;
         }
         Ok(())
+    }
+
+    pub fn switch_web_port(&mut self, port: u16) -> LaxResult<()> {
+        if port == 0 {
+            return Err(LaxError::msg("некорректный порт"));
+        }
+        self.config.apache_port = port;
+        self.config.nginx_port = port;
+        config::save_config(&self.paths, &self.config)?;
+        self.port_conflict = None;
+        self.start_all()
     }
 
     pub fn set_php_extension(&mut self, name: &str, enabled: bool) -> LaxResult<()> {

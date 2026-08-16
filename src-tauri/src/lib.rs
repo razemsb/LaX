@@ -1,5 +1,6 @@
 mod commands;
 mod config;
+mod db;
 mod discover;
 mod error;
 mod hosts;
@@ -12,6 +13,7 @@ mod process;
 mod projects;
 mod services;
 mod state;
+mod update;
 mod vhosts;
 
 use tauri::{
@@ -89,6 +91,7 @@ pub fn run() {
 
             if let Some(win) = app.get_webview_window("main") {
                 paint_caption(&win);
+                let _ = win.set_title(&format!("LaX {}", crate::update::APP_VERSION));
                 let win_h = win.clone();
                 win.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -97,6 +100,43 @@ pub fn run() {
                     }
                 });
             }
+
+            let inner = app.state::<AppState>().inner.clone();
+            let auto = inner
+                .lock()
+                .ok()
+                .map(|g| g.config.auto_start)
+                .unwrap_or(false);
+            if auto {
+                let auto_inner = inner.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(700));
+                    if let Ok(mut g) = auto_inner.lock() {
+                        match g.start_all() {
+                            Ok(()) => {
+                                g.last_message = Some("стек запущен автоматически".into());
+                            }
+                            Err(e) => {
+                                g.last_message = Some(e.to_string());
+                            }
+                        }
+                    }
+                });
+            }
+            let upd_inner = inner;
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(2));
+                match crate::update::fetch_latest() {
+                    Ok(info) => {
+                        if crate::update::is_newer(&info.version, crate::update::APP_VERSION) {
+                            if let Ok(mut g) = upd_inner.lock() {
+                                g.update = Some(info);
+                            }
+                        }
+                    }
+                    Err(e) => tracing::info!("update check skipped: {e}"),
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -119,6 +159,13 @@ pub fn run() {
             commands::open_terminal,
             commands::open_vscode,
             commands::run_project_action,
+            commands::switch_web_port,
+            commands::list_databases,
+            commands::create_database,
+            commands::import_sql,
+            commands::check_update,
+            commands::apply_update,
+            commands::dismiss_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running LaX");

@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::config::LaxConfig;
+use crate::db;
+use crate::discover;
 use crate::logs;
 use crate::php;
 use crate::platform;
@@ -66,6 +68,14 @@ pub fn stop_service(state: State<AppState>, id: String) -> Result<Snapshot, Stri
 pub fn switch_php(state: State<AppState>, version: String) -> Result<Snapshot, String> {
     with_state(&state, |o| {
         o.switch_php(&version).map_err(|e| e.to_string())?;
+        Ok(o.snapshot())
+    })
+}
+
+#[tauri::command]
+pub fn switch_web_port(state: State<AppState>, port: u16) -> Result<Snapshot, String> {
+    with_state(&state, |o| {
+        o.switch_web_port(port).map_err(|e| e.to_string())?;
         Ok(o.snapshot())
     })
 }
@@ -140,8 +150,11 @@ pub fn open_path(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn open_terminal(path: String) -> Result<(), String> {
-    platform::open_terminal(&PathBuf::from(path), None, None)
+pub fn open_terminal(state: State<AppState>, path: String) -> Result<(), String> {
+    with_state(&state, |o| {
+        let prefix = discover::tools_path_prefix(&o.paths.root, &o.paths.php_dir(&o.config));
+        platform::open_terminal(&PathBuf::from(path), None, Some(prefix.as_str()))
+    })
 }
 
 #[tauri::command]
@@ -158,24 +171,24 @@ pub fn run_project_action(
     with_state(&state, |o| {
         let dir = resolve_www_dir(&o.paths, &o.config, &path)?;
         let php_dir = o.paths.php_dir(&o.config);
+        let prefix = discover::tools_path_prefix(&o.paths.root, &php_dir);
         let composer = platform::composer_file(&o.paths.root);
-        let (line, extra_path) = match action.as_str() {
+        let line = match action.as_str() {
             "npm-install" => {
                 if !dir.join("package.json").exists() {
                     return Err("package.json не найден".into());
                 }
-                ("npm install".to_string(), None)
+                "npm install".to_string()
             }
             "composer-install" => {
                 if !dir.join("composer.json").exists() {
                     return Err("composer.json не найден".into());
                 }
-                let composer_cmd = if composer.exists() {
+                if composer.exists() {
                     format!("\"{}\" install", composer.display())
                 } else {
                     "composer install".into()
-                };
-                (composer_cmd, Some(php_dir))
+                }
             }
             other if other.starts_with("npm-run:") => {
                 let script = other.trim_start_matches("npm-run:");
@@ -185,11 +198,87 @@ pub fn run_project_action(
                 if !dir.join("package.json").exists() {
                     return Err("package.json не найден".into());
                 }
-                (format!("npm run {script}"), None)
+                format!("npm run {script}")
             }
             _ => return Err(format!("unknown action: {action}")),
         };
-        platform::open_terminal(&dir, Some(&line), extra_path.as_deref())
+        platform::open_terminal(&dir, Some(&line), Some(prefix.as_str()))
+    })
+}
+
+#[tauri::command]
+pub fn list_databases(state: State<AppState>) -> Result<Vec<String>, String> {
+    with_state(&state, |o| {
+        db::list_databases(&o.paths, &o.config).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn create_database(state: State<AppState>, name: String) -> Result<Vec<String>, String> {
+    with_state(&state, |o| {
+        db::create_database(&o.paths, &o.config, &name).map_err(|e| e.to_string())?;
+        db::list_databases(&o.paths, &o.config).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn import_sql(state: State<AppState>, db_name: String, sql: String) -> Result<(), String> {
+    with_state(&state, |o| {
+        crate::db::import_sql(&o.paths, &o.config, &db_name, &sql).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn check_update(state: State<AppState>) -> Result<Snapshot, String> {
+    let info = crate::update::fetch_latest().map_err(|e| e.to_string())?;
+    with_state(&state, |o| {
+        if crate::update::is_newer(&info.version, crate::update::APP_VERSION) {
+            o.update = Some(info);
+            o.last_message = None;
+        } else {
+            o.update = None;
+            o.last_message = Some(format!(
+                "у тебя последняя версия · v{}",
+                crate::update::APP_VERSION
+            ));
+        }
+        Ok(o.snapshot())
+    })
+}
+
+#[tauri::command]
+pub fn apply_update(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    let (root, info) = with_state(&state, |o| {
+        let info = o
+            .update
+            .clone()
+            .ok_or_else(|| "нет обновления".to_string())?;
+        o.last_message = Some("скачиваю обновление… сайты и базы не трогаю".into());
+        Ok((o.paths.root.clone(), info))
+    })?;
+    let dest = crate::update::download_asset(&root, &info).map_err(|e| e.to_string())?;
+    with_state(&state, |o| {
+        o.stop_all();
+        Ok(())
+    })?;
+    crate::update::install_asset(&root, &dest).map_err(|e| e.to_string())?;
+    if crate::update::has_staged_exe(&root) {
+        crate::update::spawn_relaunch(&root).map_err(|e| e.to_string())?;
+        app.exit(0);
+        return Ok(());
+    }
+    with_state(&state, |o| {
+        o.update = None;
+        o.last_message = Some("файлы обновлены. Перезапусти LaX".into());
+        Ok(())
+    })
+}
+
+#[tauri::command]
+pub fn dismiss_update(state: State<AppState>) -> Result<Snapshot, String> {
+    with_state(&state, |o| {
+        o.update = None;
+        Ok(o.snapshot())
     })
 }
 

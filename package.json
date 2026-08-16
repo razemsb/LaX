@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "lax": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
     "build:exe": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
-    "pack": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack.ps1"
+    "pack": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack.ps1",
+    "fetch-tools": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-tools.ps1"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
-import { Database, FolderOpen, Globe, Terminal } from "lucide-vue-next";
+import { Database, FolderOpen, Globe, Inbox, Terminal } from "lucide-vue-next";
 import { useAppStore } from "@/stores/app";
 import StatusPill from "@/components/StatusPill.vue";
 
@@ -22,7 +22,69 @@ const names: Record<string, string> = {
   nginx: "Nginx",
   mariadb: "MariaDB",
   php: "PHP",
+  mailpit: "Mailpit",
 };
+
+const databases = ref<string[]>([]);
+const newDb = ref("");
+const selectedDb = ref("");
+const importing = ref(false);
+const dbNote = ref("");
+const dbUp = computed(() => store.db?.running === true);
+
+function pmaUrl(name?: string) {
+  const base = site.value.replace(/\/$/, "");
+  if (!name) return `${base}/phpmyadmin/`;
+  return `${base}/phpmyadmin/index.php?route=/database/structure&db=${encodeURIComponent(name)}`;
+}
+
+async function loadDbs() {
+  dbNote.value = "";
+  if (!dbUp.value) {
+    databases.value = [];
+    return;
+  }
+  try {
+    databases.value = await store.listDatabases();
+    if (selectedDb.value && !databases.value.includes(selectedDb.value)) {
+      selectedDb.value = "";
+    }
+    if (!selectedDb.value && databases.value.length) {
+      selectedDb.value = databases.value[0];
+    }
+  } catch (e) {
+    databases.value = [];
+    dbNote.value = String(e);
+  }
+}
+
+watch(dbUp, loadDbs, { immediate: true });
+
+async function createDb() {
+  const name = newDb.value.trim();
+  if (!name) return;
+  databases.value = await store.createDatabase(name);
+  selectedDb.value = name;
+  newDb.value = "";
+}
+
+async function onSql(ev: Event) {
+  const input = ev.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || !selectedDb.value) return;
+  importing.value = true;
+  dbNote.value = "";
+  try {
+    const sql = await file.text();
+    await store.importSql(selectedDb.value, sql);
+    dbNote.value = `импортировано в ${selectedDb.value}`;
+  } catch (e) {
+    dbNote.value = String(e);
+  } finally {
+    importing.value = false;
+    input.value = "";
+  }
+}
 
 async function toggle(id: string, running: boolean) {
   if (running) await store.stopService(id);
@@ -32,7 +94,7 @@ async function toggle(id: string, running: boolean) {
 
 <template>
   <div v-if="store.snap" class="space-y-4 lg:space-y-8">
-    <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-5">
       <button
         v-for="s in store.snap.services"
         :key="s.id"
@@ -58,9 +120,17 @@ async function toggle(id: string, running: boolean) {
         </p>
         <div class="mt-5 flex flex-wrap gap-2">
           <button class="btn-accent rounded-lg px-4 py-2 text-sm" @click="store.openUrl(site)">localhost</button>
-          <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(site + 'phpmyadmin/')">phpMyAdmin</button>
+          <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(pmaUrl())">phpMyAdmin</button>
+          <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl('http://localhost:8025')">почта</button>
           <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openPath(www)">папка www</button>
         </div>
+        <p v-if="!store.snap.mailpitAvailable" class="mt-3 text-xs text-muted">
+          Mailpit не найден — письма mail() никуда не попадут. Запусти
+          <span class="text-text">npm run fetch-tools</span>
+        </p>
+        <p v-else class="mt-3 text-xs text-muted">
+          PHP mail() ловит Mailpit. Laravel: MAIL_HOST=127.0.0.1 MAIL_PORT=1025 MAIL_MAILER=smtp
+        </p>
       </div>
       <div class="surface divide-y divide-line overflow-hidden p-0">
         <button class="flex w-full items-center gap-3 px-5 py-3.5 text-left text-sm hover:bg-panel-2" @click="store.openPath(store.snap.root)">
@@ -72,9 +142,43 @@ async function toggle(id: string, running: boolean) {
         <button class="flex w-full items-center gap-3 px-5 py-3.5 text-left text-sm hover:bg-panel-2" @click="store.openUrl(site)">
           <Globe :size="16" class="text-muted" /> Браузер
         </button>
-        <button class="flex w-full items-center gap-3 px-5 py-3.5 text-left text-sm hover:bg-panel-2" @click="store.openUrl(site + 'phpmyadmin/')">
+        <button class="flex w-full items-center gap-3 px-5 py-3.5 text-left text-sm hover:bg-panel-2" @click="store.openUrl('http://localhost:8025')">
+          <Inbox :size="16" class="text-muted" /> Ящик Mailpit
+        </button>
+        <button class="flex w-full items-center gap-3 px-5 py-3.5 text-left text-sm hover:bg-panel-2" @click="store.openUrl(pmaUrl())">
           <Database :size="16" class="text-muted" /> База данных
         </button>
+      </div>
+    </section>
+
+    <section class="surface p-4 lg:p-6">
+      <div class="text-[11px] uppercase tracking-wider text-muted">базы MariaDB</div>
+      <p v-if="!dbUp" class="mt-2 text-sm text-muted">Сначала запусти MariaDB.</p>
+      <div v-else class="mt-4 space-y-4">
+        <div class="flex flex-wrap gap-2">
+          <input v-model="newDb" placeholder="имя_базы" class="field min-w-0 flex-1" @keydown.enter.prevent="createDb" />
+          <button class="btn-accent shrink-0 rounded-lg px-4 py-2 text-sm" :disabled="store.busy || !newDb.trim()" @click="createDb">
+            Создать
+          </button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <select v-model="selectedDb" class="field min-w-0 flex-1">
+            <option disabled value="">выбери базу</option>
+            <option v-for="d in databases" :key="d" :value="d">{{ d }}</option>
+          </select>
+          <button
+            class="btn-ghost shrink-0 rounded-lg px-4 py-2 text-sm"
+            :disabled="!selectedDb"
+            @click="store.openUrl(pmaUrl(selectedDb))"
+          >
+            phpMyAdmin
+          </button>
+          <label class="btn-ghost shrink-0 cursor-pointer rounded-lg px-4 py-2 text-sm" :class="{ 'opacity-50': !selectedDb || importing }">
+            {{ importing ? "импорт…" : "импорт .sql" }}
+            <input type="file" accept=".sql,.txt" class="hidden" :disabled="!selectedDb || importing" @change="onSql" />
+          </label>
+        </div>
+        <p v-if="dbNote" class="text-xs text-muted">{{ dbNote }}</p>
       </div>
     </section>
 

@@ -12,7 +12,7 @@ const form = reactive<LaxConfig>({
   apachePort: 80,
   nginxPort: 80,
   mysqlPort: 3306,
-  phpVersion: "php-dlya-debilov",
+  phpVersion: "php-trash-8.2",
   mysqlVersion: "mariadb-10.11.13",
   nginxVersion: "nginx-1.14.0",
   apacheVersion: "Apache24",
@@ -57,6 +57,10 @@ async function save() {
         <input v-model="form.mysqlEnabled" type="checkbox" class="accent-[#e02430]" />
         Поднимать MariaDB вместе со стеком
       </label>
+      <label class="flex items-center gap-2 text-sm">
+        <input v-model="form.autoStart" type="checkbox" class="accent-[#e02430]" />
+        При открытии LaX сразу запускать Apache и MariaDB
+      </label>
       <button class="btn-accent rounded-lg px-4 py-2 text-sm font-medium" :disabled="store.busy">Сохранить</button>
     </form>
 
@@ -77,5 +81,26 @@ async function save() {
         </button>
       </div>
     </div>
+
+    <section class="surface space-y-4 p-4 lg:col-span-2 lg:p-6">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div class="text-[11px] uppercase tracking-wider text-muted">о программе</div>
+          <div class="mt-1 text-lg font-medium">LaX v{{ store.snap.appVersion }}</div>
+          <p class="mt-1 text-sm text-muted">портативный локальный стек</p>
+        </div>
+        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" :disabled="store.busy" @click="store.checkUpdate()">
+          Проверить обновления
+        </button>
+      </div>
+      <p v-if="store.snap.update" class="text-sm">
+        Есть v{{ store.snap.update.version }}. Можно поставить сверху, www и базы не затрутся.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.repoUrl)">репозиторий</button>
+        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.issuesUrl)">задачи</button>
+        <button class="btn-accent rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.feedbackUrl)">фидбек / баг</button>
+      </div>
+    </section>
   </div>
 </template>
