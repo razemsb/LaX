@@ -8,7 +8,7 @@ use crate::discover;
 use crate::logs;
 use crate::php;
 use crate::platform;
-use crate::projects::ProjectInfo;
+use crate::projects;
 use crate::state::{AppState, ServiceInfo, Snapshot};
 
 fn with_state<T, F>(state: &AppState, f: F) -> Result<T, String>
@@ -81,8 +81,41 @@ pub fn switch_web_port(state: State<AppState>, port: u16) -> Result<Snapshot, St
 }
 
 #[tauri::command]
-pub fn create_project(state: State<AppState>, name: String) -> Result<ProjectInfo, String> {
-    with_state(&state, |o| o.create_project(&name).map_err(|e| e.to_string()))
+pub async fn create_project(
+    state: State<'_, AppState>,
+    name: String,
+    kind: Option<String>,
+) -> Result<Snapshot, String> {
+    let kind = kind.unwrap_or_else(|| "php".into());
+    match kind.as_str() {
+        "wordpress" => {
+            let (root, www, slug) = with_state(&state, |o| {
+                let slug =
+                    projects::reserve_slug(&o.paths, &o.config, &name).map_err(|e| e.to_string())?;
+                Ok((o.paths.root.clone(), o.paths.www(&o.config), slug))
+            })?;
+            let slug_msg = slug.clone();
+            tokio::task::spawn_blocking(move || projects::scaffold_wordpress(&root, &www, &slug))
+                .await
+                .map_err(|e| e.to_string())?
+                .map_err(|e| e.to_string())?;
+            with_state(&state, |o| {
+                o.prepare_sites().map_err(|e| e.to_string())?;
+                o.last_message = Some(format!("WordPress готов · http://localhost/{slug_msg}/"));
+                Ok(o.snapshot())
+            })
+        }
+        "laravel" | "vite" => with_state(&state, |o| {
+            let msg = crate::projects::start_cli_scaffold(&o.paths, &o.config, &name, &kind)
+                .map_err(|e| e.to_string())?;
+            o.last_message = Some(msg);
+            Ok(o.snapshot())
+        }),
+        _ => with_state(&state, |o| {
+            o.create_project(&name).map_err(|e| e.to_string())?;
+            Ok(o.snapshot())
+        }),
+    }
 }
 
 #[tauri::command]
@@ -122,6 +155,21 @@ pub fn set_php_extension(
         o.set_php_extension(&name, enabled)
             .map_err(|e| e.to_string())
     })
+}
+
+#[tauri::command]
+pub fn php_quick_settings(state: State<AppState>) -> Result<php::PhpQuickSettings, String> {
+    with_state(&state, |o| {
+        php::quick_settings(&o.paths, &o.config).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+pub fn set_php_quick_settings(
+    state: State<AppState>,
+    patch: php::PhpQuickPatch,
+) -> Result<php::PhpQuickSettings, String> {
+    with_state(&state, |o| o.set_php_quick(patch).map_err(|e| e.to_string()))
 }
 
 #[tauri::command]

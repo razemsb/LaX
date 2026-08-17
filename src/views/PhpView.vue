@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { useAppStore } from "@/stores/app";
-import type { PhpExtension } from "@/types";
+import type { PhpExtension, PhpQuickSettings } from "@/types";
 
 const store = useAppStore();
 const q = ref("");
 const exts = ref<PhpExtension[]>([]);
 const busyExt = ref("");
+const quick = ref<PhpQuickSettings | null>(null);
+const busyQuick = ref("");
+
+const memoryOpts = ["128M", "256M", "512M", "1G"];
+const uploadOpts = ["8M", "32M", "64M", "128M"];
 
 const filtered = computed(() => {
   const s = q.value.trim().toLowerCase();
@@ -16,8 +21,27 @@ const filtered = computed(() => {
 
 const onCount = computed(() => exts.value.filter((e) => e.enabled).length);
 
+const memoryChoices = computed(() => {
+  const cur = quick.value?.memoryLimit;
+  const list = [...memoryOpts];
+  if (cur && !list.some((x) => x.toLowerCase() === cur.toLowerCase())) list.unshift(cur);
+  return list;
+});
+
+const uploadChoices = computed(() => {
+  const cur = quick.value?.uploadMaxFilesize;
+  const list = [...uploadOpts];
+  if (cur && !list.some((x) => x.toLowerCase() === cur.toLowerCase())) list.unshift(cur);
+  return list;
+});
+
 async function load() {
-  exts.value = await store.listPhpExtensions();
+  const [list, settings] = await Promise.all([
+    store.listPhpExtensions(),
+    store.phpQuickSettings(),
+  ]);
+  exts.value = list;
+  quick.value = settings;
 }
 
 async function toggle(ext: PhpExtension) {
@@ -27,6 +51,16 @@ async function toggle(ext: PhpExtension) {
     await load();
   } finally {
     busyExt.value = "";
+  }
+}
+
+async function patchQuick(key: string, value: boolean | string) {
+  busyQuick.value = key;
+  try {
+    quick.value = await store.setPhpQuickSettings({ [key]: value });
+    if (key === "xdebug") await load();
+  } finally {
+    busyQuick.value = "";
   }
 }
 
@@ -54,14 +88,102 @@ watch(() => store.snap?.config.phpVersion, load);
       </div>
     </section>
 
+    <section v-if="quick" class="surface space-y-4 p-4 sm:p-5">
+      <div>
+        <div class="eyebrow">быстрый php.ini</div>
+        <p class="mt-1 text-xs text-muted">пишется сразу; если стек онлайн — PHP перезапустится</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          class="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-left"
+          :disabled="!!busyQuick"
+          @click="patchQuick('displayErrors', !quick.displayErrors)"
+        >
+          <div>
+            <div class="text-sm">display_errors</div>
+            <div class="mt-0.5 text-[11px] text-muted">ошибки в браузере</div>
+          </div>
+          <span
+            class="relative h-5 w-9 rounded-full border border-line"
+            :class="quick.displayErrors ? 'bg-[#1e3d2e]' : 'bg-ink'"
+          >
+            <span
+              class="absolute top-0.5 h-4 w-4 rounded-full"
+              :class="quick.displayErrors ? 'right-0.5 bg-ok' : 'left-0.5 bg-[#3a3a3e]'"
+            />
+          </span>
+        </button>
+
+        <button
+          class="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-left disabled:opacity-50"
+          :disabled="!!busyQuick || (!quick.xdebugAvailable && !quick.xdebug)"
+          :title="quick.xdebugAvailable ? '' : 'нет php_xdebug в ext/'"
+          @click="patchQuick('xdebug', !quick.xdebug)"
+        >
+          <div>
+            <div class="text-sm">Xdebug</div>
+            <div class="mt-0.5 text-[11px] text-muted">
+              {{ quick.xdebugAvailable ? `IDE слушай :${quick.xdebugPort} · CGI :9003` : "dll не найдена в ext/" }}
+            </div>
+          </div>
+          <span
+            class="relative h-5 w-9 rounded-full border border-line"
+            :class="quick.xdebug ? 'bg-[#1e3d2e]' : 'bg-ink'"
+          >
+            <span
+              class="absolute top-0.5 h-4 w-4 rounded-full"
+              :class="quick.xdebug ? 'right-0.5 bg-ok' : 'left-0.5 bg-[#3a3a3e]'"
+            />
+          </span>
+        </button>
+      </div>
+
+      <div>
+        <div class="mb-2 text-xs text-muted">memory_limit</div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="opt in memoryChoices"
+            :key="opt"
+            class="rounded-lg border px-3 py-1.5 text-sm"
+            :class="opt.toLowerCase() === quick.memoryLimit.toLowerCase()
+              ? 'border-accent/40 bg-accent/10 text-text'
+              : 'border-line text-muted hover:text-text'"
+            :disabled="!!busyQuick"
+            @click="patchQuick('memoryLimit', opt)"
+          >
+            {{ opt }}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="mb-2 text-xs text-muted">upload_max_filesize <span v-if="quick.postMaxSize" class="text-muted/80">· post {{ quick.postMaxSize }}</span></div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="opt in uploadChoices"
+            :key="opt"
+            class="rounded-lg border px-3 py-1.5 text-sm"
+            :class="opt.toLowerCase() === quick.uploadMaxFilesize.toLowerCase()
+              ? 'border-accent/40 bg-accent/10 text-text'
+              : 'border-line text-muted hover:text-text'"
+            :disabled="!!busyQuick"
+            @click="patchQuick('uploadMaxFilesize', opt)"
+          >
+            {{ opt }}
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section>
       <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div class="min-w-0">
           <div class="text-[11px] uppercase tracking-wider text-muted">расширения</div>
-          <p class="mt-1 text-xs text-muted">{{ onCount }} включено · после изменений: Закрыть все → Запустить все</p>
+          <p class="mt-1 text-xs text-muted">{{ onCount }} включено · после списка расширений лучше перезапустить стек</p>
         </div>
         <div class="flex min-w-0 gap-2">
-          <input v-model="q" placeholder="поиск" class="field min-w-0 flex-1 !py-2 lg:w-48 lg:flex-none" />
+          <input v-model="q" data-page-search type="search" placeholder="поиск расширения  Ctrl+F" class="field min-w-0 flex-1 !py-2 lg:w-48 lg:flex-none" />
           <button class="btn-ghost shrink-0 rounded-lg px-3 py-2 text-xs" @click="store.openIni('php')">php.ini</button>
         </div>
       </div>

@@ -45,6 +45,23 @@ export interface PhpExtension {
   kind: string;
 }
 
+export interface PhpQuickSettings {
+  displayErrors: boolean;
+  memoryLimit: string;
+  uploadMaxFilesize: string;
+  postMaxSize: string;
+  xdebug: boolean;
+  xdebugAvailable: boolean;
+  xdebugPort: number;
+}
+
+export interface PhpQuickPatch {
+  displayErrors?: boolean;
+  memoryLimit?: string;
+  uploadMaxFilesize?: string;
+  xdebug?: boolean;
+}
+
 export interface PortConflict {
   port: number;
   pid: number;

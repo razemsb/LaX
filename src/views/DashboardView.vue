@@ -13,6 +13,9 @@ import {
 } from "lucide-vue-next";
 import { useAppStore } from "@/stores/app";
 import StatusPill from "@/components/StatusPill.vue";
+import { showContextMenu } from "@/composables/contextMenu";
+import { projectContextItems } from "@/lib/projectCommands";
+import type { ProjectInfo } from "@/types";
 
 const store = useAppStore();
 const www = computed(() => {
@@ -106,6 +109,16 @@ async function onSql(ev: Event) {
 async function toggle(id: string, running: boolean) {
   if (running) await store.stopService(id);
   else await store.startService(id);
+}
+
+function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
+  showContextMenu(e, projectContextItems(p, {
+    openUrl: (url) => store.openUrl(url),
+    openPath: (path) => store.openPath(path),
+    openTerminal: (path) => store.openTerminal(path),
+    openVscode: (path) => store.openVscode(path),
+    run: (path, action) => store.runProjectAction(path, action),
+  }));
 }
 </script>
 
@@ -219,8 +232,10 @@ async function toggle(id: string, running: boolean) {
         <button
           v-for="p in store.snap.projects.slice(0, 6)"
           :key="p.name"
+          data-ctx
           class="surface min-w-0 p-4 text-left"
           @click="store.openUrl(p.url)"
+          @contextmenu="onProjectMenu($event, p)"
         >
           <div class="font-medium">{{ p.name }}</div>
           <div class="mt-1 truncate text-xs text-muted">{{ p.url.replace("http://", "") }}</div>

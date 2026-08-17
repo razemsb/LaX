@@ -224,12 +224,32 @@ pub fn hosts_path() -> &'static str {
 pub fn composer_file(root: &Path) -> PathBuf {
     let win = root.join("bin").join("composer").join("composer.bat");
     let unix = root.join("bin").join("composer").join("composer");
+    let phar = root.join("bin").join("composer").join("composer.phar");
     if cfg!(windows) && win.exists() {
         win
     } else if unix.exists() {
         unix
+    } else if phar.exists() {
+        phar
     } else {
         win
+    }
+}
+
+/// Command that runs Composer in a spawned terminal (quoted paths).
+pub fn composer_cmdline(root: &Path, php_dir: &Path) -> String {
+    let bat = root.join("bin").join("composer").join("composer.bat");
+    let unix = root.join("bin").join("composer").join("composer");
+    let phar = root.join("bin").join("composer").join("composer.phar");
+    let php = bin_path(php_dir, "php");
+    if cfg!(windows) && bat.exists() {
+        format!("\"{}\"", bat.display())
+    } else if unix.exists() {
+        format!("\"{}\"", unix.display())
+    } else if phar.exists() && php.exists() {
+        format!("\"{}\" \"{}\"", php.display(), phar.display())
+    } else {
+        "composer".into()
     }
 }
 

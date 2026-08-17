@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
-import type { LaxConfig, PhpExtension, ProjectInfo, Snapshot } from "@/types";
+import type { LaxConfig, PhpExtension, PhpQuickPatch, PhpQuickSettings, Snapshot } from "@/types";
 
 export const useAppStore = defineStore("app", {
   state: () => ({
@@ -54,13 +54,11 @@ export const useAppStore = defineStore("app", {
     async saveConfig(config: LaxConfig) {
       return this.run("save_config", { config });
     },
-    async createProject(name: string) {
+    async createProject(name: string, kind = "php") {
       this.busy = true;
       this.error = "";
       try {
-        const project = await invoke<ProjectInfo>("create_project", { name });
-        await this.refresh();
-        return project;
+        this.snap = await invoke<Snapshot>("create_project", { name, kind });
       } catch (e) {
         this.error = String(e);
         throw e;
@@ -99,6 +97,18 @@ export const useAppStore = defineStore("app", {
       this.error = "";
       try {
         await invoke("set_php_extension", { name, enabled });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
+    async phpQuickSettings() {
+      return invoke<PhpQuickSettings>("php_quick_settings");
+    },
+    async setPhpQuickSettings(patch: PhpQuickPatch) {
+      this.error = "";
+      try {
+        return await invoke<PhpQuickSettings>("set_php_quick_settings", { patch });
       } catch (e) {
         this.error = String(e);
         throw e;

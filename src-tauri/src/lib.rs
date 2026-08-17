@@ -153,6 +153,8 @@ pub fn run() {
             commands::read_logs,
             commands::list_php_extensions,
             commands::set_php_extension,
+            commands::php_quick_settings,
+            commands::set_php_quick_settings,
             commands::open_ini,
             commands::open_url,
             commands::open_path,

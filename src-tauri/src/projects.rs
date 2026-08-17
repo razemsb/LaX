@@ -1,10 +1,14 @@
 use std::fs;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use serde::Serialize;
 
 use crate::config::{LaxConfig, Paths};
+use crate::discover;
 use crate::error::{LaxError, LaxResult};
+use crate::platform;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -78,11 +82,21 @@ pub fn document_root_for(project: &Path) -> PathBuf {
 }
 
 pub fn create_project(paths: &Paths, cfg: &LaxConfig, name: &str) -> LaxResult<ProjectInfo> {
+    create_php(paths, cfg, name)
+}
+
+pub fn reserve_slug(paths: &Paths, cfg: &LaxConfig, name: &str) -> LaxResult<String> {
     let slug = sanitize(name)?;
     let dir = paths.www(cfg).join(&slug);
     if dir.exists() {
-        return Err(LaxError::msg(format!("project '{slug}' already exists")));
+        return Err(LaxError::msg(format!("проект '{slug}' уже есть")));
     }
+    Ok(slug)
+}
+
+pub fn create_php(paths: &Paths, cfg: &LaxConfig, name: &str) -> LaxResult<ProjectInfo> {
+    let slug = reserve_slug(paths, cfg, name)?;
+    let dir = paths.www(cfg).join(&slug);
     fs::create_dir_all(&dir)?;
     let index = format!(
         r#"<?php
@@ -111,10 +125,127 @@ pub fn create_project(paths: &Paths, cfg: &LaxConfig, name: &str) -> LaxResult<P
         slug = slug
     );
     fs::write(dir.join("index.php"), index)?;
+    listed(paths, cfg, &slug)
+}
+
+/// Opens a terminal in `www` and runs create-project / npm create.
+pub fn start_cli_scaffold(paths: &Paths, cfg: &LaxConfig, name: &str, kind: &str) -> LaxResult<String> {
+    let slug = reserve_slug(paths, cfg, name)?;
+    let www = paths.www(cfg);
+    fs::create_dir_all(&www)?;
+    let php_dir = paths.php_dir(cfg);
+    let prefix = discover::tools_path_prefix(&paths.root, &php_dir);
+    let line = match kind {
+        "laravel" => {
+            let composer = platform::composer_cmdline(&paths.root, &php_dir);
+            format!("{composer} create-project --prefer-dist --no-interaction laravel/laravel {slug}")
+        }
+        "vite" => {
+            if discover::node_bin_dir(&paths.root).is_none() {
+                return Err(LaxError::msg(
+                    "Node не найден в bin/node. Запусти npm run fetch-tools",
+                ));
+            }
+            format!("npm create --yes vite@latest {slug} -- --template vue")
+        }
+        other => return Err(LaxError::msg(format!("неизвестный шаблон: {other}"))),
+    };
+    platform::open_terminal(&www, Some(&line), Some(prefix.as_str()))
+        .map_err(LaxError::msg)?;
+    let hint = match kind {
+        "laravel" => format!("Laravel: в терминале composer create-project → {slug}"),
+        "vite" => format!("Vite + Vue: в терминале npm create → {slug}"),
+        _ => slug.clone(),
+    };
+    Ok(hint)
+}
+
+pub fn scaffold_wordpress(root: &Path, www: &Path, slug: &str) -> LaxResult<()> {
+    let dest = www.join(slug);
+    if dest.exists() {
+        return Err(LaxError::msg(format!("проект '{slug}' уже есть")));
+    }
+    fs::create_dir_all(root.join("tmp"))?;
+    let zip_path = root.join("tmp").join("wordpress-latest.zip");
+    download_wordpress(&zip_path)?;
+    fs::create_dir_all(&dest)?;
+    if let Err(e) = extract_zip_prefix(&zip_path, &dest, "wordpress/") {
+        let _ = fs::remove_dir_all(&dest);
+        return Err(e);
+    }
+    if !dest.join("wp-config-sample.php").exists() && !dest.join("index.php").exists() {
+        let _ = fs::remove_dir_all(&dest);
+        return Err(LaxError::msg("архив WordPress пустой или неожиданный"));
+    }
+    Ok(())
+}
+
+fn download_wordpress(dest: &Path) -> LaxResult<()> {
+    if dest.is_file() {
+        if let Ok(meta) = dest.metadata() {
+            if meta.len() > 1_000_000 {
+                return Ok(());
+            }
+        }
+    }
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(Duration::from_secs(20))
+        .timeout(Duration::from_secs(180))
+        .user_agent("LaX/wordpress-scaffold")
+        .build();
+    let resp = agent
+        .get("https://wordpress.org/latest.zip")
+        .call()
+        .map_err(|e| LaxError::msg(format!("скачивание WordPress: {e}")))?;
+    let tmp = dest.with_extension("part");
+    let mut file = fs::File::create(&tmp)?;
+    io::copy(&mut resp.into_reader(), &mut file)?;
+    file.flush()?;
+    drop(file);
+    if dest.exists() {
+        let _ = fs::remove_file(dest);
+    }
+    fs::rename(&tmp, dest)?;
+    Ok(())
+}
+
+fn extract_zip_prefix(zip_path: &Path, dest: &Path, prefix: &str) -> LaxResult<()> {
+    let file = fs::File::open(zip_path)?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| LaxError::msg(e.to_string()))?;
+    let dest = dunce::canonicalize(dest).map_err(|e| LaxError::msg(e.to_string()))?;
+    for i in 0..archive.len() {
+        let mut entry = archive
+            .by_index(i)
+            .map_err(|e| LaxError::msg(e.to_string()))?;
+        if entry.is_dir() {
+            continue;
+        }
+        let name = entry.name().replace('\\', "/");
+        let rel = name
+            .strip_prefix(prefix)
+            .unwrap_or(name.as_str())
+            .trim_start_matches('/');
+        if rel.is_empty() || rel.contains("..") {
+            continue;
+        }
+        let out = dest.join(rel);
+        if !out.starts_with(&dest) {
+            continue;
+        }
+        if let Some(parent) = out.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let mut target = fs::File::create(&out)?;
+        io::copy(&mut entry, &mut target)?;
+    }
+    Ok(())
+}
+
+fn listed(paths: &Paths, cfg: &LaxConfig, slug: &str) -> LaxResult<ProjectInfo> {
     let list = list_projects(paths, cfg)?;
     list.into_iter()
         .find(|p| p.name == slug)
-        .ok_or_else(|| LaxError::msg("project created but not listed"))
+        .ok_or_else(|| LaxError::msg("проект создан, но не попал в список"))
 }
 
 fn sanitize(name: &str) -> LaxResult<String> {

@@ -236,7 +236,7 @@ impl Orchestrator {
         }
     }
 
-    fn prepare_sites(&mut self) -> LaxResult<()> {
+    pub fn prepare_sites(&mut self) -> LaxResult<()> {
         config::ensure_runtime_dirs(&self.paths, &self.config)?;
         crate::portable::rebase(&self.paths, &self.config)?;
         php::apply_php(&self.paths, &self.config)?;
@@ -360,6 +360,16 @@ impl Orchestrator {
         self.config.php_version = version.to_string();
         config::save_config(&self.paths, &self.config)?;
         php::apply_php(&self.paths, &self.config)?;
+        self.reload_web_if_running()
+    }
+
+    pub fn set_php_quick(&mut self, patch: php::PhpQuickPatch) -> LaxResult<php::PhpQuickSettings> {
+        php::set_quick_settings(&self.paths, &self.config, &patch)?;
+        self.reload_web_if_running()?;
+        php::quick_settings(&self.paths, &self.config)
+    }
+
+    fn reload_web_if_running(&mut self) -> LaxResult<()> {
         let apache_up = port_open(self.config.apache_port) && self.config.web_server == "apache";
         let nginx_up = port_open(self.config.nginx_port) && self.config.web_server == "nginx";
         if apache_up {

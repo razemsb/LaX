@@ -5,6 +5,7 @@ import { useAppStore } from "@/stores/app";
 const store = useAppStore();
 const which = ref("apache");
 const body = ref("");
+const q = ref("");
 const tabs = [
   { id: "apache", label: "Apache" },
   { id: "nginx", label: "Nginx" },
@@ -13,7 +14,12 @@ const tabs = [
   { id: "mailpit", label: "Mailpit" },
 ];
 
-const lines = computed(() => body.value.split(/\r?\n/));
+const lines = computed(() => {
+  const all = body.value.split(/\r?\n/);
+  const s = q.value.trim().toLowerCase();
+  if (!s) return all;
+  return all.filter((line) => line.toLowerCase().includes(s));
+});
 
 function kind(line: string) {
   const l = line.toLowerCase();
@@ -45,7 +51,14 @@ watch(which, load);
       >
         {{ tab.label }}
       </button>
-      <button class="btn-ghost ml-auto rounded-lg px-3 py-1.5 text-xs" @click="load">Обновить</button>
+      <input
+        v-model="q"
+        data-page-search
+        type="search"
+        placeholder="поиск в логе  Ctrl+F"
+        class="field ml-auto min-w-0 max-w-56 !py-1.5 text-xs"
+      />
+      <button class="btn-ghost rounded-lg px-3 py-1.5 text-xs" @click="load">Обновить</button>
     </div>
     <pre class="scrollbar min-h-0 flex-1 overflow-auto rounded-xl border border-line bg-[#0a0a0b] p-5 text-xs leading-6"><span v-for="(line, i) in lines" :key="i" :class="kind(line)" class="block whitespace-pre-wrap">{{ line }}</span></pre>
   </div>

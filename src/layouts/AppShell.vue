@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from "vue";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { RouterLink, RouterView, useRoute } from "vue-router";
+import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
 import {
   Blocks,
   FolderKanban,
@@ -14,9 +14,16 @@ import {
 import { useAppStore } from "@/stores/app";
 import BrandLogo from "@/components/BrandLogo.vue";
 import Banner from "@/components/Banner.vue";
+import ContextMenu from "@/components/ContextMenu.vue";
+import {
+  editMenuItems,
+  isEditableTarget,
+  showContextMenu,
+} from "@/composables/contextMenu";
 
 const store = useAppStore();
 const route = useRoute();
+const router = useRouter();
 let timer: number | undefined;
 let unlistenProgress: UnlistenFn | undefined;
 
@@ -40,7 +47,63 @@ const showPort = computed(() => {
   return store.dismissedPort !== `${c.port}:${c.pid}`;
 });
 
+function wwwPath() {
+  if (!store.snap) return "";
+  return `${store.snap.root}\\${store.snap.config.documentRoot}`.replaceAll("/", "\\");
+}
+
+function siteUrl() {
+  const port = store.snap?.config.webServer === "nginx"
+    ? store.snap.config.nginxPort
+    : store.snap?.config.apachePort;
+  return port && port !== 80 ? `http://localhost:${port}/` : "http://localhost/";
+}
+
+function onRootContext(e: MouseEvent) {
+  if ((e.target as HTMLElement | null)?.closest("[data-ctx]")) return;
+  if (isEditableTarget(e.target)) {
+    showContextMenu(e, editMenuItems(e.target));
+    return;
+  }
+  const www = wwwPath();
+  showContextMenu(e, [
+    {
+      label: store.runningCount ? "Закрыть все" : "Запустить все",
+      accent: !store.runningCount,
+      disabled: store.busy,
+      run: () => (store.runningCount ? store.stopAll() : store.startAll()),
+    },
+    { type: "sep" },
+    { label: "localhost", run: () => store.openUrl(siteUrl()) },
+    { label: "phpMyAdmin", run: () => store.openUrl(`${siteUrl().replace(/\/$/, "")}/phpmyadmin/`) },
+    { label: "Почта Mailpit", run: () => store.openUrl("http://localhost:8025") },
+    { label: "Папка www", disabled: !www, run: () => store.openPath(www) },
+    { label: "Терминал www", disabled: !www, run: () => store.openTerminal(www) },
+    { type: "sep" },
+    { label: "Проекты", run: () => router.push("/projects") },
+    { label: "PHP", run: () => router.push("/php") },
+    { label: "Логи", run: () => router.push("/logs") },
+    { label: "Настройки", run: () => router.push("/settings") },
+  ]);
+}
+
+function onFind(e: KeyboardEvent) {
+  if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "f") return;
+  if (isEditableTarget(e.target) && (e.target as HTMLElement).hasAttribute("data-page-search")) return;
+  const el = document.querySelector<HTMLInputElement>("[data-page-search]");
+  if (!el) return;
+  e.preventDefault();
+  el.focus();
+  el.select();
+}
+
+function blockNativeMenu(e: Event) {
+  e.preventDefault();
+}
+
 onMounted(async () => {
+  document.addEventListener("contextmenu", blockNativeMenu, true);
+  window.addEventListener("keydown", onFind);
   await store.refresh();
   unlistenProgress = await listen<string>("update-progress", (e) => {
     store.updateProgress = e.payload;
@@ -50,13 +113,16 @@ onMounted(async () => {
   }, 4000);
 });
 onUnmounted(() => {
+  document.removeEventListener("contextmenu", blockNativeMenu, true);
+  window.removeEventListener("keydown", onFind);
   if (timer) window.clearInterval(timer);
   if (unlistenProgress) unlistenProgress();
 });
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 bg-ink">
+  <div class="flex h-full min-h-0 bg-ink" @contextmenu="onRootContext">
+    <ContextMenu />
     <aside class="flex w-16 shrink-0 flex-col border-r border-line lg:w-56">
       <div
         class="flex items-center justify-center gap-3 px-2 py-4 lg:justify-start lg:px-5 lg:py-5"
