@@ -75,16 +75,16 @@ async function create() {
       Положи туда node.exe или запусти <span class="text-text">npm run fetch-tools</span>.
     </p>
 
-    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <article v-for="p in store.snap.projects" :key="p.name" class="surface min-w-0 p-4 lg:p-5">
         <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 class="text-base font-medium">{{ p.name }}</h3>
-            <div class="mt-1 text-xs text-muted">{{ p.url }}</div>
+          <div class="min-w-0">
+            <h3 class="truncate text-base font-medium">{{ p.name }}</h3>
+            <div class="mt-1 truncate text-xs text-muted">{{ p.url.replace("http://", "") }}</div>
           </div>
           <div class="flex shrink-0 gap-1">
-            <span class="rounded-md bg-panel-2 px-2 py-1 text-[10px] text-muted">{{ kindLabel[p.kind] ?? p.kind }}</span>
-            <span v-if="p.hasPublic" class="rounded-md bg-panel-2 px-2 py-1 text-[10px] text-muted">public/</span>
+            <span class="rounded-md bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wider text-muted">{{ kindLabel[p.kind] ?? p.kind }}</span>
+            <span v-if="p.hasPublic" class="rounded-md bg-white/5 px-2 py-1 text-[10px] text-muted">public/</span>
           </div>
         </div>
 

@@ -13,15 +13,15 @@ const emit = defineEmits<{ close: [] }>();
 
 <template>
   <div
-    class="mx-4 mt-3 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm lg:mx-8 lg:mt-4"
+    class="mx-3 mt-3 flex flex-wrap items-start gap-3 rounded-xl border px-3 py-3 text-sm sm:mx-4 sm:px-4 lg:mx-8 lg:mt-4"
     :class="tone === 'accent'
       ? 'border-accent/30 bg-accent/10 text-accent'
-      : 'border-line bg-panel text-text'"
+      : 'border-line bg-panel/80 text-text'"
   >
     <div class="min-w-0 flex-1 pt-0.5">
       <slot />
     </div>
-    <div class="flex shrink-0 items-center gap-2">
+    <div class="flex min-w-0 flex-wrap items-center justify-end gap-2">
       <slot name="actions" />
       <button
         type="button"

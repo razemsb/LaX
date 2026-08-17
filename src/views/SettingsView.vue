@@ -38,11 +38,11 @@ async function save() {
   <div v-if="store.snap" class="grid max-w-4xl grid-cols-1 gap-6 lg:grid-cols-2">
     <form class="surface space-y-5 p-4 lg:p-6" @submit.prevent="save">
       <label class="block">
-        <div class="mb-2 text-[11px] uppercase tracking-wider text-muted">корень сайтов</div>
+        <div class="mb-2 eyebrow">корень сайтов</div>
         <input v-model="form.documentRoot" class="field" />
       </label>
       <label class="block">
-        <div class="mb-2 text-[11px] uppercase tracking-wider text-muted">веб-сервер</div>
+        <div class="mb-2 eyebrow">веб-сервер</div>
         <select v-model="form.webServer" class="field">
           <option value="apache">Apache</option>
           <option value="nginx">Nginx</option>
@@ -65,7 +65,7 @@ async function save() {
     </form>
 
     <div class="space-y-3">
-      <div class="text-[11px] uppercase tracking-wider text-muted">конфиги</div>
+      <div class="eyebrow">конфиги</div>
       <div class="surface divide-y divide-line overflow-hidden">
         <button type="button" class="flex w-full items-center justify-between px-5 py-3.5 text-left text-sm hover:bg-panel-2" @click="store.openIni('php')">
           php.ini <span class="text-xs text-muted">PHP</span>
@@ -85,7 +85,7 @@ async function save() {
     <section class="surface space-y-4 p-4 lg:col-span-2 lg:p-6">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div class="text-[11px] uppercase tracking-wider text-muted">о программе</div>
+          <div class="eyebrow">о программе</div>
           <div class="mt-1 text-lg font-medium">LaX v{{ store.snap.appVersion }}</div>
           <p class="mt-1 text-sm text-muted">портативный локальный стек</p>
         </div>

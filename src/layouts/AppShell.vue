@@ -85,26 +85,31 @@ onUnmounted(() => {
         </RouterLink>
       </nav>
 
-      <div class="hidden px-3 pb-2 lg:block">
+      <div class="px-2 pb-1 lg:px-3 lg:pb-2">
         <button
-          class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11px] text-muted hover:bg-panel-2 hover:text-text"
+          class="flex w-full items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11px] text-muted hover:bg-panel-2 hover:text-text lg:justify-start"
+          title="фидбек / баг"
           @click="store.snap && store.openUrl(store.snap.feedbackUrl)"
         >
           <MessageSquare :size="12" class="shrink-0" />
-          фидбек / баг
+          <span class="hidden lg:inline">фидбек / баг</span>
         </button>
       </div>
 
-      <div class="m-2 rounded-xl border border-line bg-panel/60 px-2 py-2 text-center lg:m-3 lg:px-3 lg:py-3 lg:text-left" :title="stackLine">
+      <div
+        class="m-2 overflow-hidden rounded-xl border px-2 py-2 text-center lg:m-3 lg:px-3 lg:py-3 lg:text-left"
+        :class="store.runningCount ? 'border-ok/25 bg-ok/5' : 'border-line bg-panel/60'"
+        :title="stackLine"
+      >
         <div class="hidden items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted lg:flex">
           <span
             class="h-1.5 w-1.5 rounded-full"
-            :class="store.runningCount ? 'bg-ok' : 'bg-[#3a3a3e]'"
+            :class="store.runningCount ? 'bg-ok pulse-dot' : 'bg-[#3a3a3e]'"
           />
           стек
         </div>
         <div class="hidden truncate text-xs lg:mt-1 lg:block">{{ stackLine }}</div>
-        <div class="text-[11px] text-muted lg:mt-1">{{ store.runningCount }}/{{ store.snap?.services.length ?? 0 }}</div>
+        <div class="text-[11px] tabular-nums text-muted lg:mt-1">{{ store.runningCount }}/{{ store.snap?.services.length ?? 0 }}</div>
       </div>
     </aside>
 
@@ -112,7 +117,7 @@ onUnmounted(() => {
       <header class="flex items-center justify-between gap-3 border-b border-line px-4 py-3 lg:px-8 lg:py-4">
         <div class="min-w-0">
           <div class="truncate text-base font-semibold lg:text-lg">{{ route.name }}</div>
-          <div class="truncate text-[11px] text-muted">{{ store.snap?.root ?? "" }}</div>
+          <div class="hidden truncate text-[11px] text-muted sm:block" :title="store.snap?.root">{{ store.snap?.root ?? "" }}</div>
         </div>
         <button
           class="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium lg:px-4"
@@ -121,7 +126,8 @@ onUnmounted(() => {
           @click="store.runningCount ? store.stopAll() : store.startAll()"
         >
           <Loader2 v-if="store.busy" :size="14" class="spin" />
-          {{ store.runningCount ? "Закрыть все" : "Запустить все" }}
+          <span class="sm:hidden">{{ store.runningCount ? "Стоп" : "Старт" }}</span>
+          <span class="hidden sm:inline">{{ store.runningCount ? "Закрыть все" : "Запустить все" }}</span>
         </button>
       </header>
 

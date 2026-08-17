@@ -42,8 +42,10 @@ watch(() => store.snap?.config.phpVersion, load);
         <button
           v-for="ver in store.snap.phpVersions"
           :key="ver"
-          class="rounded-lg border px-4 py-2 text-sm"
-          :class="ver === store.snap.config.phpVersion ? 'border-text text-text' : 'border-line text-muted hover:text-text'"
+          class="rounded-lg border px-4 py-2 text-sm transition"
+          :class="ver === store.snap.config.phpVersion
+            ? 'border-accent/40 bg-accent/10 text-text'
+            : 'border-line text-muted hover:border-[#3f3f46] hover:text-text'"
           :disabled="store.busy"
           @click="store.switchPhp(ver)"
         >

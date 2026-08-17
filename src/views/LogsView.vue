@@ -37,8 +37,10 @@ watch(which, load);
       <button
         v-for="tab in tabs"
         :key="tab.id"
-        class="rounded-lg px-3 py-1.5 text-sm"
-        :class="which === tab.id ? 'nav-active' : 'text-muted hover:text-text'"
+        class="rounded-lg px-3 py-1.5 text-sm transition"
+        :class="which === tab.id
+          ? 'bg-white/8 text-text shadow-[inset_0_-2px_0_#e02430]'
+          : 'text-muted hover:bg-white/4 hover:text-text'"
         @click="which = tab.id"
       >
         {{ tab.label }}
