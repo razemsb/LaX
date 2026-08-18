@@ -37,10 +37,16 @@ pub struct LaxConfig {
     pub auto_start: bool,
     #[serde(default = "default_mysql_enabled", alias = "mysql_enabled")]
     pub mysql_enabled: bool,
+    #[serde(default = "default_theme")]
+    pub theme: String,
 }
 
 fn default_mysql_enabled() -> bool {
     true
+}
+
+fn default_theme() -> String {
+    "noir".into()
 }
 
 fn default_tld() -> String {
@@ -64,6 +70,7 @@ impl Default for LaxConfig {
             php_cgi_ports: vec![9003, 9004],
             auto_start: false,
             mysql_enabled: true,
+            theme: "noir".into(),
         }
     }
 }

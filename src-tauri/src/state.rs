@@ -412,6 +412,20 @@ impl Orchestrator {
         self.prepare_sites()?;
         Ok(p)
     }
+
+    pub fn set_theme(&mut self, theme: &str) -> LaxResult<()> {
+        let theme = theme.trim().to_ascii_lowercase();
+        let ok = matches!(
+            theme.as_str(),
+            "noir" | "paper" | "midnight" | "quartz" | "glass" | "obsidian"
+        );
+        if !ok {
+            return Err(LaxError::msg("неизвестная тема"));
+        }
+        self.config.theme = theme;
+        config::save_config(&self.paths, &self.config)?;
+        Ok(())
+    }
 }
 
 fn wait_port(port: u16, attempts: u32) -> LaxResult<()> {

@@ -150,6 +150,7 @@ pub fn run() {
             commands::create_project,
             commands::get_config,
             commands::save_config,
+            commands::set_theme,
             commands::read_logs,
             commands::list_php_extensions,
             commands::set_php_extension,

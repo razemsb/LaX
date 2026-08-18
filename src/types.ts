@@ -10,9 +10,10 @@ export interface LaxConfig {
   mysqlVersion: string;
   nginxVersion: string;
   apacheVersion: string;
-  phpCgiPorts: number[];
+    phpCgiPorts: number[];
   autoStart: boolean;
   mysqlEnabled: boolean;
+  theme: string;
 }
 
 export interface ServiceInfo {

@@ -13,10 +13,10 @@ const emit = defineEmits<{ close: [] }>();
 
 <template>
   <div
-    class="mx-3 mt-3 flex flex-wrap items-start gap-3 rounded-xl border px-3 py-3 text-sm sm:mx-4 sm:px-4 lg:mx-8 lg:mt-4"
+    class="mx-3 mt-3 flex flex-wrap items-start gap-3 rounded-xl border px-3 py-3 text-sm sm:mx-5 xl:mx-8 xl:mt-4"
     :class="tone === 'accent'
       ? 'border-accent/30 bg-accent/10 text-accent'
-      : 'border-line bg-panel/80 text-text'"
+      : 'border-line bg-panel text-text'"
   >
     <div class="min-w-0 flex-1 pt-0.5">
       <slot />
@@ -25,7 +25,7 @@ const emit = defineEmits<{ close: [] }>();
       <slot name="actions" />
       <button
         type="button"
-        class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-panel-2 hover:text-text"
+        class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-lift hover:text-text"
         title="закрыть"
         @click="emit('close')"
       >

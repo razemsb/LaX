@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
 import type { LaxConfig, PhpExtension, PhpQuickPatch, PhpQuickSettings, Snapshot } from "@/types";
+import { applyTheme } from "@/lib/themes";
 
 export const useAppStore = defineStore("app", {
   state: () => ({
@@ -22,6 +23,7 @@ export const useAppStore = defineStore("app", {
       this.loading = true;
       try {
         this.snap = await invoke<Snapshot>("snapshot");
+        if (this.snap?.config.theme) applyTheme(this.snap.config.theme);
         this.error = "";
       } catch (e) {
         this.error = String(e);
@@ -32,6 +34,7 @@ export const useAppStore = defineStore("app", {
     async refreshStatus() {
       try {
         this.snap = await invoke<Snapshot>("snapshot");
+        if (this.snap?.config.theme) applyTheme(this.snap.config.theme);
       } catch {
         /* keep last snap */
       }
@@ -53,6 +56,16 @@ export const useAppStore = defineStore("app", {
     },
     async saveConfig(config: LaxConfig) {
       return this.run("save_config", { config });
+    },
+    async setTheme(theme: string) {
+      applyTheme(theme);
+      this.error = "";
+      try {
+        this.snap = await invoke<Snapshot>("set_theme", { theme });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
     },
     async createProject(name: string, kind = "php") {
       this.busy = true;

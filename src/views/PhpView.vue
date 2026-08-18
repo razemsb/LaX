@@ -106,11 +106,11 @@ watch(() => store.snap?.config.phpVersion, load);
           </div>
           <span
             class="relative h-5 w-9 rounded-full border border-line"
-            :class="quick.displayErrors ? 'bg-[#1e3d2e]' : 'bg-ink'"
+            :class="quick.displayErrors ? 'bg-ok/20' : 'bg-lift'"
           >
             <span
               class="absolute top-0.5 h-4 w-4 rounded-full"
-              :class="quick.displayErrors ? 'right-0.5 bg-ok' : 'left-0.5 bg-[#3a3a3e]'"
+              :class="quick.displayErrors ? 'right-0.5 bg-ok' : 'left-0.5 bg-dot'"
             />
           </span>
         </button>
@@ -129,11 +129,11 @@ watch(() => store.snap?.config.phpVersion, load);
           </div>
           <span
             class="relative h-5 w-9 rounded-full border border-line"
-            :class="quick.xdebug ? 'bg-[#1e3d2e]' : 'bg-ink'"
+            :class="quick.xdebug ? 'bg-ok/20' : 'bg-lift'"
           >
             <span
               class="absolute top-0.5 h-4 w-4 rounded-full"
-              :class="quick.xdebug ? 'right-0.5 bg-ok' : 'left-0.5 bg-[#3a3a3e]'"
+              :class="quick.xdebug ? 'right-0.5 bg-ok' : 'left-0.5 bg-dot'"
             />
           </span>
         </button>
@@ -188,11 +188,11 @@ watch(() => store.snap?.config.phpVersion, load);
         </div>
       </div>
 
-      <div class="surface grid max-h-[min(420px,calc(100dvh-16rem))] grid-cols-1 gap-x-2 overflow-auto p-2 scrollbar sm:grid-cols-2 lg:grid-cols-3">
+      <div class="surface grid max-h-[min(420px,calc(100dvh-16rem))] grid-cols-1 gap-x-2 overflow-auto p-2 scrollbar sm:grid-cols-2 xl:grid-cols-3">
         <button
           v-for="ext in filtered"
           :key="ext.name + ext.kind"
-          class="flex min-w-0 items-center justify-between rounded-lg px-3 py-2.5 text-left hover:bg-panel-2"
+          class="flex min-w-0 items-center justify-between rounded-lg px-3 py-2.5 text-left hover:bg-lift"
           :disabled="busyExt === ext.name"
           @click="toggle(ext)"
         >
@@ -202,11 +202,11 @@ watch(() => store.snap?.config.phpVersion, load);
           </span>
           <span
             class="relative h-5 w-9 rounded-full border border-line"
-            :class="ext.enabled ? 'bg-[#1e3d2e]' : 'bg-ink'"
+            :class="ext.enabled ? 'bg-ok/20' : 'bg-lift'"
           >
             <span
               class="absolute top-0.5 h-4 w-4 rounded-full"
-              :class="ext.enabled ? 'right-0.5 bg-ok' : 'left-0.5 bg-[#3a3a3e]'"
+              :class="ext.enabled ? 'right-0.5 bg-ok' : 'left-0.5 bg-dot'"
             />
           </span>
         </button>

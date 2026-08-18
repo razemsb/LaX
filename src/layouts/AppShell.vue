@@ -121,68 +121,69 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 bg-ink" @contextmenu="onRootContext">
+  <div class="app-root flex h-full min-h-0" @contextmenu="onRootContext">
+    <div class="liquid-bg" aria-hidden="true" />
     <ContextMenu />
-    <aside class="flex w-16 shrink-0 flex-col border-r border-line lg:w-56">
+    <aside class="flex w-14 shrink-0 flex-col border-r border-line md:w-16 xl:w-56">
       <div
-        class="flex items-center justify-center gap-3 px-2 py-4 lg:justify-start lg:px-5 lg:py-5"
+        class="flex items-center justify-center gap-3 px-2 py-4 xl:justify-start xl:px-5 xl:py-5"
         :title="store.snap ? `LaX v${store.snap.appVersion}` : 'LaX'"
       >
         <BrandLogo size="h-9 w-9 rounded-xl" />
-        <div class="hidden min-w-0 lg:block">
+        <div class="hidden min-w-0 xl:block">
           <div class="text-base font-semibold leading-none">LaX</div>
-          <div class="mt-1.5 inline-flex rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">
+          <div class="mt-1.5 inline-flex rounded-md bg-lift px-1.5 py-0.5 text-[10px] text-muted">
             v{{ store.snap?.appVersion ?? "…" }}
           </div>
         </div>
       </div>
 
-      <nav class="flex flex-1 flex-col gap-0.5 px-2 lg:px-3">
+      <nav class="flex flex-1 flex-col gap-0.5 px-1.5 md:px-2 xl:px-3">
         <RouterLink
           v-for="item in links"
           :key="item.to"
           :to="item.to"
           :title="item.label"
-          class="nav-item flex items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-sm lg:justify-start lg:px-3"
+          class="nav-item flex items-center justify-center gap-3 px-0 py-2.5 text-sm xl:justify-start xl:px-3"
           :class="route.path === item.to ? 'nav-active' : ''"
         >
           <component :is="item.icon" :size="16" class="shrink-0" />
-          <span class="hidden lg:inline">{{ item.label }}</span>
+          <span class="hidden xl:inline">{{ item.label }}</span>
         </RouterLink>
       </nav>
 
-      <div class="px-2 pb-1 lg:px-3 lg:pb-2">
+      <div class="px-1.5 pb-1 md:px-2 xl:px-3 xl:pb-2">
         <button
-          class="flex w-full items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11px] text-muted hover:bg-panel-2 hover:text-text lg:justify-start"
+          class="flex w-full items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-left text-[11px] text-muted hover:bg-lift hover:text-text xl:justify-start"
           title="фидбек / баг"
           @click="store.snap && store.openUrl(store.snap.feedbackUrl)"
         >
           <MessageSquare :size="12" class="shrink-0" />
-          <span class="hidden lg:inline">фидбек / баг</span>
+          <span class="hidden xl:inline">фидбек / баг</span>
         </button>
       </div>
 
       <div
-        class="m-2 overflow-hidden rounded-xl border px-2 py-2 text-center lg:m-3 lg:px-3 lg:py-3 lg:text-left"
-        :class="store.runningCount ? 'border-ok/25 bg-ok/5' : 'border-line bg-panel/60'"
+        class="m-2 overflow-hidden rounded-xl border px-2 py-2 text-center xl:m-3 xl:px-3 xl:py-3 xl:text-left"
+        :class="store.runningCount ? 'border-ok/25 bg-ok/5' : 'border-line'"
         :title="stackLine"
       >
-        <div class="hidden items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted lg:flex">
+        <div class="hidden items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted xl:flex">
           <span
             class="h-1.5 w-1.5 rounded-full"
-            :class="store.runningCount ? 'bg-ok pulse-dot' : 'bg-[#3a3a3e]'"
+            :class="store.runningCount ? 'bg-ok pulse-dot' : 'bg-dot'"
           />
           стек
         </div>
-        <div class="hidden truncate text-xs lg:mt-1 lg:block">{{ stackLine }}</div>
-        <div class="text-[11px] tabular-nums text-muted lg:mt-1">{{ store.runningCount }}/{{ store.snap?.services.length ?? 0 }}</div>
+        <div class="hidden truncate text-xs xl:mt-1 xl:block">{{ stackLine }}</div>
+        <div class="text-[11px] tabular-nums text-muted xl:mt-1">{{ store.runningCount }}/{{ store.snap?.services.length ?? 0 }}</div>
       </div>
     </aside>
 
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header class="flex items-center justify-between gap-3 border-b border-line px-4 py-3 lg:px-8 lg:py-4">
+      <header class="flex items-center justify-between gap-3 border-b border-line px-3 py-2.5 sm:px-5 xl:px-8 xl:py-4">
         <div class="min-w-0">
-          <div class="truncate text-base font-semibold lg:text-lg">{{ route.name }}</div>
+          <div class="truncate text-base font-semibold xl:text-lg">{{ route.name }}</div>
           <div class="hidden truncate text-[11px] text-muted sm:block" :title="store.snap?.root">{{ store.snap?.root ?? "" }}</div>
         </div>
         <button
@@ -246,7 +247,7 @@ onUnmounted(() => {
         <span class="text-muted">{{ store.snap.message }}</span>
       </Banner>
 
-      <main class="scrollbar flex min-h-0 flex-1 flex-col overflow-auto px-4 py-4 lg:px-8 lg:py-6">
+      <main class="scrollbar flex min-h-0 flex-1 flex-col overflow-auto px-3 py-3 sm:px-5 sm:py-5 xl:px-8 xl:py-6">
         <RouterView class="min-h-0 flex-1" />
       </main>
     </div>

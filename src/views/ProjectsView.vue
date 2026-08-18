@@ -132,8 +132,8 @@ async function create() {
             <div class="mt-1 truncate text-xs text-muted">{{ p.url.replace("http://", "") }}</div>
           </div>
           <div class="flex shrink-0 gap-1">
-            <span class="rounded-md bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wider text-muted">{{ kindLabel[p.kind] ?? p.kind }}</span>
-            <span v-if="p.hasPublic" class="rounded-md bg-white/5 px-2 py-1 text-[10px] text-muted">public/</span>
+            <span class="rounded-md bg-lift px-2 py-1 text-[10px] uppercase tracking-wider text-muted">{{ kindLabel[p.kind] ?? p.kind }}</span>
+            <span v-if="p.hasPublic" class="rounded-md bg-lift px-2 py-1 text-[10px] text-muted">public/</span>
           </div>
         </div>
 

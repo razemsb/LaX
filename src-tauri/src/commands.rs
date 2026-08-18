@@ -132,6 +132,14 @@ pub fn save_config(state: State<AppState>, config: LaxConfig) -> Result<Snapshot
 }
 
 #[tauri::command]
+pub fn set_theme(state: State<AppState>, theme: String) -> Result<Snapshot, String> {
+    with_state(&state, |o| {
+        o.set_theme(&theme).map_err(|e| e.to_string())?;
+        Ok(o.snapshot())
+    })
+}
+
+#[tauri::command]
 pub fn read_logs(state: State<AppState>, which: String) -> Result<String, String> {
     with_state(&state, |o| {
         logs::read_log(&o.paths, &o.config, &which, 250).map_err(|e| e.to_string())

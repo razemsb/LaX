@@ -124,11 +124,11 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
 
 <template>
   <div v-if="store.snap" class="space-y-4 xl:space-y-7">
-    <section class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5 sm:gap-3">
+    <section class="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-5">
       <button
         v-for="s in store.snap.services"
         :key="s.id"
-        class="surface svc-card flex min-h-[118px] min-w-0 flex-col p-3.5 text-left transition sm:min-h-[132px] sm:p-4"
+        class="surface svc-card flex min-h-[108px] min-w-0 flex-col p-3 text-left sm:min-h-[124px] sm:p-4"
         :class="s.running ? 'svc-on' : ''"
         :disabled="store.busy"
         @click="toggle(s.id, s.running)"
@@ -155,7 +155,7 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
         <p class="mt-2 max-w-lg text-sm leading-relaxed text-muted">
           Проекты из <span class="text-text">www</span> открываются как
         </p>
-        <code class="mt-2 inline-block rounded-md bg-black/30 px-2 py-1 text-xs text-text">http://localhost/папка/</code>
+        <code class="mt-2 inline-block rounded-md bg-lift px-2 py-1 text-xs text-text">http://localhost/папка/</code>
         <div class="mt-5 flex flex-wrap gap-2">
           <button class="btn-accent rounded-lg px-4 py-2 text-sm" @click="store.openUrl(site)">localhost</button>
           <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(pmaUrl())">phpMyAdmin</button>
@@ -171,19 +171,19 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
         </p>
       </div>
       <div class="surface grid grid-cols-1 overflow-hidden p-1 sm:grid-cols-2 xl:grid-cols-1">
-        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-panel-2" @click="store.openPath(store.snap.root)">
+        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openPath(store.snap.root)">
           <span class="icon-well"><FolderOpen :size="15" /></span> Корень LaX
         </button>
-        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-panel-2" @click="store.openTerminal(www)">
+        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openTerminal(www)">
           <span class="icon-well"><Terminal :size="15" /></span> Терминал
         </button>
-        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-panel-2" @click="store.openUrl(site)">
+        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openUrl(site)">
           <span class="icon-well"><Globe :size="15" /></span> Браузер
         </button>
-        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-panel-2" @click="store.openUrl('http://localhost:8025')">
+        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openUrl('http://localhost:8025')">
           <span class="icon-well"><Inbox :size="15" /></span> Ящик Mailpit
         </button>
-        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-panel-2 sm:col-span-2 xl:col-span-1" @click="store.openUrl(pmaUrl())">
+        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift sm:col-span-2 xl:col-span-1" @click="store.openUrl(pmaUrl())">
           <span class="icon-well"><Database :size="15" /></span> База данных
         </button>
       </div>
@@ -239,7 +239,7 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
         >
           <div class="font-medium">{{ p.name }}</div>
           <div class="mt-1 truncate text-xs text-muted">{{ p.url.replace("http://", "") }}</div>
-          <div class="mt-3 inline-flex rounded-md bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">{{ p.kind }}</div>
+          <div class="mt-3 inline-flex rounded-md bg-lift px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">{{ p.kind }}</div>
         </button>
       </div>
     </section>
