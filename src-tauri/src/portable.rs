@@ -46,6 +46,7 @@ pub fn rebase(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
 
 fn write_mysql_ini(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
     let root = unix(&paths.root);
+    let mysql = unix(&paths.mysql_dir(cfg));
     let body = format!(
         r#"[client]
 port={port}
@@ -53,6 +54,7 @@ socket=/tmp/mysql.sock
 
 [mysqld]
 datadir="{root}/data/mariadb"
+basedir="{mysql}"
 port={port}
 socket=/tmp/mysql.sock
 skip-external-locking
@@ -70,9 +72,12 @@ quick
 max_allowed_packet=512M
 "#,
         port = cfg.mysql_port,
-        root = root
+        root = root,
+        mysql = mysql
     );
-    write_file(&paths.mysql_dir(cfg).join("my.ini"), &body)
+    write_file(&paths.mysql_dir(cfg).join("my.ini"), &body)?;
+    let _ = write_file(&paths.mysql_dir(cfg).join("my.cnf"), &body);
+    Ok(())
 }
 
 fn replace_root(text: &str, old: &str, new: &str) -> String {

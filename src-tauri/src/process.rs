@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::fs::OpenOptions;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 
@@ -35,6 +36,30 @@ impl ProcessTable {
         cwd: &Path,
         env: &[(&str, String)],
     ) -> LaxResult<u32> {
+        self.spawn_inner(name, program, args, cwd, env, None)
+    }
+
+    pub fn spawn_logged(
+        &mut self,
+        name: &str,
+        program: &Path,
+        args: &[&str],
+        cwd: &Path,
+        env: &[(&str, String)],
+        log: &Path,
+    ) -> LaxResult<u32> {
+        self.spawn_inner(name, program, args, cwd, env, Some(log))
+    }
+
+    fn spawn_inner(
+        &mut self,
+        name: &str,
+        program: &Path,
+        args: &[&str],
+        cwd: &Path,
+        env: &[(&str, String)],
+        log: Option<&Path>,
+    ) -> LaxResult<u32> {
         if !program.exists() {
             return Err(LaxError::msg(format!(
                 "binary not found: {}",
@@ -44,11 +69,23 @@ impl ProcessTable {
         self.stop(name);
 
         let mut cmd = Command::new(program);
-        cmd.args(args)
-            .current_dir(cwd)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
+        cmd.args(args).current_dir(cwd).stdin(Stdio::null());
+        if let Some(log) = log {
+            if let Some(parent) = log.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            let file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log)
+                .map_err(|e| LaxError::msg(format!("log {}: {e}", log.display())))?;
+            let err = file
+                .try_clone()
+                .map_err(|e| LaxError::msg(format!("log clone: {e}")))?;
+            cmd.stdout(Stdio::from(file)).stderr(Stdio::from(err));
+        } else {
+            cmd.stdout(Stdio::null()).stderr(Stdio::null());
+        }
         for (k, v) in env {
             cmd.env(k, v);
         }
@@ -129,12 +166,24 @@ pub fn taskkill_image(image: &str) {
 }
 
 pub fn run_capture(program: &Path, args: &[&str], cwd: &Path) -> LaxResult<(i32, String)> {
+    run_capture_env(program, args, cwd, &[])
+}
+
+pub fn run_capture_env(
+    program: &Path,
+    args: &[&str],
+    cwd: &Path,
+    env: &[(&str, String)],
+) -> LaxResult<(i32, String)> {
     let mut cmd = Command::new(program);
     cmd.args(args)
         .current_dir(cwd)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
     platform::hide_window(&mut cmd);
     let out = cmd
         .output()
@@ -150,6 +199,33 @@ pub fn write_file(path: &Path, body: &str) -> LaxResult<()> {
     }
     fs::write(path, body)?;
     Ok(())
+}
+
+/// Extra `LD_LIBRARY_PATH` entries for vendored ELF libs (MariaDB generic tarball).
+pub fn unix_lib_env(dirs: &[&Path]) -> Vec<(String, String)> {
+    #[cfg(unix)]
+    {
+        let extra: Vec<String> = dirs
+            .iter()
+            .filter(|p| p.is_dir())
+            .map(|p| p.to_string_lossy().into_owned())
+            .collect();
+        if extra.is_empty() {
+            return Vec::new();
+        }
+        let rest = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+        let joined = if rest.is_empty() {
+            extra.join(":")
+        } else {
+            format!("{}:{rest}", extra.join(":"))
+        };
+        vec![("LD_LIBRARY_PATH".into(), joined)]
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = dirs;
+        Vec::new()
+    }
 }
 
 #[cfg(windows)]

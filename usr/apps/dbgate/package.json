@@ -1,0 +1,7 @@
+{
+  "name": "lax-dbgate",
+  "private": true,
+  "dependencies": {
+    "dbgate-serve": "7.2.5"
+  }
+}

@@ -132,9 +132,19 @@ pub fn save_config(state: State<AppState>, config: LaxConfig) -> Result<Snapshot
 }
 
 #[tauri::command]
-pub fn set_theme(state: State<AppState>, theme: String) -> Result<Snapshot, String> {
-    with_state(&state, |o| {
+pub fn set_theme(app: AppHandle, state: State<AppState>, theme: String) -> Result<Snapshot, String> {
+    let snap = with_state(&state, |o| {
         o.set_theme(&theme).map_err(|e| e.to_string())?;
+        Ok(o.snapshot())
+    })?;
+    crate::apply_window_theme(&app, &theme);
+    Ok(snap)
+}
+
+#[tauri::command]
+pub fn set_db_admin(state: State<AppState>, id: String) -> Result<Snapshot, String> {
+    with_state(&state, |o| {
+        o.set_db_admin(&id).map_err(|e| e.to_string())?;
         Ok(o.snapshot())
     })
 }

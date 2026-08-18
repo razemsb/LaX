@@ -34,3 +34,43 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${{ github.ref_name }}" src-tauri/target/release/bundle/appimage/*.AppImage --clobber
+
+  stack-ubuntu:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch portable stack
+        run: bash scripts/fetch-linux-stack.sh --skip-mariadb
+      - name: Smoke binaries
+        run: |
+          chmod +x scripts/fetch-linux-stack.sh
+          bin/php/php-8.4/php -v
+          bin/php/php-8.4/php-fpm -v
+          bin/nginx/nginx-1.28.3/nginx -v
+          bin/node/bin/node -v
+          bin/mailpit/mailpit version || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lax-linux-stack-ubuntu
+          path: |
+            bin/php
+            bin/nginx
+            bin/node
+            bin/mailpit
+            bin/composer
+
+  stack-fedora:
+    runs-on: ubuntu-22.04
+    container: fedora:41
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deps
+        run: dnf install -y curl tar gzip findutils git
+      - name: Fetch portable stack
+        run: bash scripts/fetch-linux-stack.sh --skip-mariadb
+      - name: Smoke binaries
+        run: |
+          bin/php/php-8.4/php -v
+          bin/php/php-8.4/php-fpm -v
+          bin/nginx/nginx-1.28.3/nginx -v
+          bin/node/bin/node -v

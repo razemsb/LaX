@@ -31,7 +31,9 @@ pub fn apply_php(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
     );
     write_file(&paths.root.join("etc/apache2/mod_php.conf"), &mod_php)?;
 
-    let ports = if cfg.php_cgi_ports.is_empty() {
+    let ports = if cfg!(unix) {
+        vec![cfg.php_cgi_ports.first().copied().unwrap_or(9003)]
+    } else if cfg.php_cgi_ports.is_empty() {
         vec![9003, 9004]
     } else {
         cfg.php_cgi_ports.clone()
@@ -47,7 +49,36 @@ pub fn apply_php(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
 
     patch_httpd_includes(paths, cfg)?;
     patch_mail_ini(paths, cfg)?;
+    ensure_php_ini(paths, cfg)?;
     Ok(())
+}
+
+fn ensure_php_ini(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
+    let ini = php_ini_path(paths, cfg);
+    if ini.exists() {
+        return Ok(());
+    }
+    let body = r#"[PHP]
+display_errors = On
+display_startup_errors = On
+error_reporting = E_ALL
+memory_limit = 256M
+upload_max_filesize = 128M
+post_max_size = 128M
+max_execution_time = 120
+date.timezone = UTC
+cgi.fix_pathinfo = 1
+
+[mail function]
+SMTP = 127.0.0.1
+smtp_port = 1025
+sendmail_from = lax@localhost
+
+[mysqli]
+mysqli.default_host = 127.0.0.1
+mysqli.default_port = 3306
+"#;
+    write_file(&ini, body)
 }
 
 fn patch_mail_ini(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {

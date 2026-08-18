@@ -7,19 +7,24 @@ export const THEMES: {
   experimental?: boolean;
   swatch: [string, string, string];
 }[] = [
-  { id: "noir", name: "Noir", hint: "чёрный минимализм", swatch: ["#0a0a0b", "#161616", "#e02430"] },
-  { id: "paper", name: "Paper", hint: "светлая бумага", swatch: ["#f4f1ea", "#fffdf8", "#c42b2b"] },
-  { id: "midnight", name: "Midnight", hint: "ночной синий", swatch: ["#080c16", "#121a2c", "#e24b56"] },
-  { id: "quartz", name: "Quartz", hint: "холодный светлый", swatch: ["#eef0f4", "#ffffff", "#d21f2b"] },
-  { id: "glass", name: "Glass", hint: "жидкое стекло", experimental: true, swatch: ["#07080e", "#3a4258", "#ff5a66"] },
-  { id: "obsidian", name: "Obsidian", hint: "тёмное стекло", experimental: true, swatch: ["#050605", "#1c2620", "#e02430"] },
+  { id: "noir", name: "Noir", hint: "матовый чёрный", swatch: ["#09090b", "#1a1a1c", "#e02430"] },
+  { id: "paper", name: "Paper", hint: "тёплая бумага", swatch: ["#f6f1e6", "#fffdf8", "#c42b2b"] },
+  { id: "midnight", name: "Midnight", hint: "ночной индиго", swatch: ["#070b14", "#152038", "#e24b56"] },
+  { id: "quartz", name: "Quartz", hint: "холодный белый", swatch: ["#eef1f6", "#ffffff", "#d21f2b"] },
+  { id: "glass", name: "Glass", hint: "холодный индиго", swatch: ["#10182a", "#182238", "#e02430"] },
+  { id: "obsidian", name: "Obsidian", hint: "тёмный мох", swatch: ["#0c100e", "#161c18", "#e02430"] },
 ];
 
 const ids = new Set(THEMES.map((t) => t.id));
 
 export function applyTheme(id: string) {
   const next = ids.has(id as ThemeId) ? id : "noir";
-  document.documentElement.dataset.theme = next;
+  const root = document.documentElement;
+  if (root.getAttribute("data-theme") === next) return;
+  root.removeAttribute("data-theme");
+  void root.offsetWidth;
+  root.setAttribute("data-theme", next);
+  root.style.colorScheme = next === "paper" || next === "quartz" ? "light" : "dark";
   try {
     localStorage.setItem("lax-theme", next);
   } catch {

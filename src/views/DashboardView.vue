@@ -9,12 +9,14 @@ import {
   Inbox,
   Layers,
   Server,
+  Table2,
   Terminal,
 } from "lucide-vue-next";
 import { useAppStore } from "@/stores/app";
 import StatusPill from "@/components/StatusPill.vue";
 import { showContextMenu } from "@/composables/contextMenu";
 import { projectContextItems } from "@/lib/projectCommands";
+import { dbAdminLabel, dbAdminUrl } from "@/lib/dbAdmin";
 import type { ProjectInfo } from "@/types";
 
 const store = useAppStore();
@@ -35,6 +37,7 @@ const names: Record<string, string> = {
   mariadb: "MariaDB",
   php: "PHP",
   mailpit: "Mailpit",
+  dbgate: "DbGate",
 };
 
 const icons: Record<string, typeof Server> = {
@@ -43,6 +46,7 @@ const icons: Record<string, typeof Server> = {
   mariadb: Database,
   php: Blocks,
   mailpit: Inbox,
+  dbgate: Table2,
 };
 
 const databases = ref<string[]>([]);
@@ -52,10 +56,8 @@ const importing = ref(false);
 const dbNote = ref("");
 const dbUp = computed(() => store.db?.running === true);
 
-function pmaUrl(name?: string) {
-  const base = site.value.replace(/\/$/, "");
-  if (!name) return `${base}/phpmyadmin/`;
-  return `${base}/phpmyadmin/index.php?route=/database/structure&db=${encodeURIComponent(name)}`;
+function dbUrl(name?: string) {
+  return dbAdminUrl(site.value, store.snap?.config, name);
 }
 
 async function loadDbs() {
@@ -124,7 +126,7 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
 
 <template>
   <div v-if="store.snap" class="space-y-4 xl:space-y-7">
-    <section class="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-5">
+    <section class="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 xl:grid-cols-6">
       <button
         v-for="s in store.snap.services"
         :key="s.id"
@@ -158,7 +160,7 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
         <code class="mt-2 inline-block rounded-md bg-lift px-2 py-1 text-xs text-text">http://localhost/папка/</code>
         <div class="mt-5 flex flex-wrap gap-2">
           <button class="btn-accent rounded-lg px-4 py-2 text-sm" @click="store.openUrl(site)">localhost</button>
-          <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(pmaUrl())">phpMyAdmin</button>
+          <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(dbUrl())">{{ dbAdminLabel(store.snap.config) }}</button>
           <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl('http://localhost:8025')">почта</button>
           <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openPath(www)">папка www</button>
         </div>
@@ -168,6 +170,12 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
         </p>
         <p v-else class="mt-3 text-xs leading-relaxed text-muted">
           PHP mail() ловит Mailpit. Laravel: MAIL_HOST=127.0.0.1 MAIL_PORT=1025 MAIL_MAILER=smtp
+        </p>
+        <p
+          v-if="store.snap.config.dbAdmin === 'dbgate' && !store.snap.dbgateAvailable"
+          class="mt-2 text-xs leading-relaxed text-muted"
+        >
+          DbGate не установлен. Запусти <span class="text-text">npm run fetch-tools</span>
         </p>
       </div>
       <div class="surface grid grid-cols-1 overflow-hidden p-1 sm:grid-cols-2 xl:grid-cols-1">
@@ -183,8 +191,8 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
         <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openUrl('http://localhost:8025')">
           <span class="icon-well"><Inbox :size="15" /></span> Ящик Mailpit
         </button>
-        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift sm:col-span-2 xl:col-span-1" @click="store.openUrl(pmaUrl())">
-          <span class="icon-well"><Database :size="15" /></span> База данных
+        <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift sm:col-span-2 xl:col-span-1" @click="store.openUrl(dbUrl())">
+          <span class="icon-well"><Database :size="15" /></span> {{ dbAdminLabel(store.snap.config) }}
         </button>
       </div>
     </section>
@@ -208,9 +216,9 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
             <button
               class="btn-ghost min-w-0 flex-1 rounded-lg px-4 py-2 text-sm sm:flex-none"
               :disabled="!selectedDb"
-              @click="store.openUrl(pmaUrl(selectedDb))"
+              @click="store.openUrl(dbUrl(selectedDb))"
             >
-              phpMyAdmin
+              {{ dbAdminLabel(store.snap.config) }}
             </button>
             <label class="btn-ghost flex-1 cursor-pointer rounded-lg px-4 py-2 text-center text-sm sm:flex-none" :class="{ 'opacity-50': !selectedDb || importing }">
               {{ importing ? "импорт…" : "импорт .sql" }}

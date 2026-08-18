@@ -13,6 +13,7 @@ pub fn read_log(paths: &Paths, cfg: &LaxConfig, which: &str, max: usize) -> LaxR
         "mysql" | "mariadb" => paths.datadir().join("mysql.err"),
         "php" => paths.tmp().join("php_errors.log"),
         "mailpit" => paths.root.join("logs").join("mailpit.log"),
+        "dbgate" => paths.root.join("logs").join("dbgate.log"),
         "lax" => paths.root.join("logs").join("lax.log"),
         _ => paths.apache_dir(cfg).join("logs").join("error.log"),
     };

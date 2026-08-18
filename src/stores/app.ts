@@ -34,7 +34,6 @@ export const useAppStore = defineStore("app", {
     async refreshStatus() {
       try {
         this.snap = await invoke<Snapshot>("snapshot");
-        if (this.snap?.config.theme) applyTheme(this.snap.config.theme);
       } catch {
         /* keep last snap */
       }
@@ -62,6 +61,15 @@ export const useAppStore = defineStore("app", {
       this.error = "";
       try {
         this.snap = await invoke<Snapshot>("set_theme", { theme });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
+    async setDbAdmin(id: string) {
+      this.error = "";
+      try {
+        this.snap = await invoke<Snapshot>("set_db_admin", { id });
       } catch (e) {
         this.error = String(e);
         throw e;

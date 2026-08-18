@@ -88,6 +88,7 @@ pub struct Snapshot {
     pub port_conflict: Option<PortConflict>,
     pub node_available: bool,
     pub mailpit_available: bool,
+    pub dbgate_available: bool,
     pub app_version: String,
     pub repo_url: String,
     pub issues_url: String,
@@ -98,7 +99,8 @@ pub struct Snapshot {
 impl Orchestrator {
     pub fn load() -> LaxResult<Self> {
         let paths = Paths::detect();
-        let config = config::load_config(&paths)?;
+        let mut config = config::load_config(&paths)?;
+        reconcile_versions(&paths, &mut config);
         config::ensure_runtime_dirs(&paths, &config)?;
         let _ = crate::portable::rebase(&paths, &config);
         Ok(Self {
@@ -127,6 +129,7 @@ impl Orchestrator {
             port_conflict: self.port_conflict.clone(),
             node_available: discover::node_bin_dir(&self.paths.root).is_some(),
             mailpit_available: services::mailpit_bin(&self.paths).is_some(),
+            dbgate_available: services::dbgate_script(&self.paths).is_some(),
             app_version: crate::update::APP_VERSION.to_string(),
             repo_url: crate::update::REPO_URL.to_string(),
             issues_url: crate::update::ISSUES_URL.to_string(),
@@ -143,6 +146,7 @@ impl Orchestrator {
         let apache_on = self.config.web_server == "apache";
         let nginx_on = self.config.web_server == "nginx";
         let mailpit = services::mailpit_bin(&self.paths).is_some();
+        let dbgate = services::dbgate_script(&self.paths).is_some();
         vec![
             ServiceInfo {
                 id: "apache".into(),
@@ -188,6 +192,15 @@ impl Orchestrator {
                 port: Some(MAILPIT_UI),
                 version: "SMTP :1025".into(),
                 enabled: mailpit,
+            },
+            ServiceInfo {
+                id: "dbgate".into(),
+                name: "DbGate".into(),
+                running: port_open(services::DBGATE_UI),
+                pid: self.procs.get("dbgate").map(|p| p.pid),
+                port: Some(services::DBGATE_UI),
+                version: format!(":{}", services::DBGATE_UI),
+                enabled: dbgate,
             },
         ]
     }
@@ -254,6 +267,7 @@ impl Orchestrator {
         }
         self.start_web()?;
         let _ = services::start_mailpit(&mut self.procs, &self.paths);
+        let _ = services::start_dbgate(&mut self.procs, &self.paths, &self.config);
         self.port_conflict = None;
         Ok(())
     }
@@ -264,12 +278,19 @@ impl Orchestrator {
         services::stop_php_cgi(&mut self.procs);
         services::stop_mariadb(&mut self.procs);
         services::stop_mailpit(&mut self.procs);
+        services::stop_dbgate(&mut self.procs);
         self.procs.stop_all();
         self.port_conflict = None;
     }
 
     fn start_web(&mut self) -> LaxResult<()> {
         let port = self.web_port();
+        #[cfg(unix)]
+        {
+            if let Err(msg) = unix_port_allowed(port) {
+                return Err(LaxError::msg(msg));
+            }
+        }
         let ours = self.procs.get("apache").is_some() || self.procs.get("nginx").is_some();
         if port_open(port) && !ours {
             return Err(self.fail_port(port));
@@ -325,11 +346,23 @@ impl Orchestrator {
             }
             "mailpit" => {
                 if services::mailpit_bin(&self.paths).is_none() {
-                    return Err(LaxError::msg(
-                        "Mailpit не найден. Запусти scripts/fetch-tools.ps1 — бинарник появится в bin/mailpit",
-                    ));
+                    return Err(LaxError::msg(if cfg!(unix) {
+                        "Mailpit не найден. Запусти bash scripts/fetch-linux-stack.sh — бинарник появится в bin/mailpit"
+                    } else {
+                        "Mailpit не найден. Запусти scripts/fetch-tools.ps1 — бинарник появится в bin/mailpit"
+                    }));
                 }
                 services::start_mailpit(&mut self.procs, &self.paths)?;
+            }
+            "dbgate" => {
+                if services::dbgate_script(&self.paths).is_none() {
+                    return Err(LaxError::msg(if cfg!(unix) {
+                        "DbGate не найден. Запусти bash scripts/fetch-linux-stack.sh — пакет появится в usr/apps/dbgate"
+                    } else {
+                        "DbGate не найден. Запусти npm run fetch-tools — пакет появится в usr/apps/dbgate"
+                    }));
+                }
+                services::start_dbgate(&mut self.procs, &self.paths, &self.config)?;
             }
             other => return Err(LaxError::msg(format!("unknown service {other}"))),
         }
@@ -348,6 +381,7 @@ impl Orchestrator {
                 }
             }
             "mailpit" => services::stop_mailpit(&mut self.procs),
+            "dbgate" => services::stop_dbgate(&mut self.procs),
             other => return Err(LaxError::msg(format!("unknown service {other}"))),
         }
         Ok(())
@@ -402,6 +436,7 @@ impl Orchestrator {
 
     pub fn save(&mut self, cfg: LaxConfig) -> LaxResult<()> {
         self.config = cfg;
+        self.config.db_admin = config::normalize_db_admin(&self.config.db_admin);
         config::save_config(&self.paths, &self.config)?;
         self.prepare_sites()?;
         Ok(())
@@ -425,6 +460,46 @@ impl Orchestrator {
         self.config.theme = theme;
         config::save_config(&self.paths, &self.config)?;
         Ok(())
+    }
+
+    pub fn set_db_admin(&mut self, id: &str) -> LaxResult<()> {
+        self.config.db_admin = config::normalize_db_admin(id);
+        config::save_config(&self.paths, &self.config)?;
+        Ok(())
+    }
+}
+
+fn reconcile_versions(paths: &Paths, cfg: &mut LaxConfig) {
+    let phps = php_versions(&paths.root);
+    if !phps.is_empty() && !phps.iter().any(|v| v == &cfg.php_version) {
+        cfg.php_version = phps[0].clone();
+    }
+    let mysqls = discover::mysql_versions(&paths.root);
+    if !mysqls.is_empty() && !mysqls.iter().any(|v| v == &cfg.mysql_version) {
+        cfg.mysql_version = mysqls[0].clone();
+    }
+    let nginxs = discover::nginx_versions(&paths.root);
+    if !nginxs.is_empty() && !nginxs.iter().any(|v| v == &cfg.nginx_version) {
+        cfg.nginx_version = nginxs[0].clone();
+    }
+    #[cfg(unix)]
+    {
+        let httpd = crate::platform::bin_path(&paths.apache_dir(cfg).join("bin"), "httpd");
+        if cfg.web_server == "apache" && !httpd.exists() {
+            cfg.web_server = "nginx".into();
+        }
+    }
+}
+
+#[cfg(unix)]
+fn unix_port_allowed(port: u16) -> Result<(), String> {
+    use std::net::TcpListener;
+    match TcpListener::bind(("127.0.0.1", port)) {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => Err(format!(
+            "порт {port} на Linux недоступен без root/capabilities. Поставь 8080 в Настройках."
+        )),
+        Err(_) => Ok(()),
     }
 }
 

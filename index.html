@@ -8,7 +8,11 @@
     <script>
       try {
         var t = localStorage.getItem("lax-theme");
-        if (t) document.documentElement.setAttribute("data-theme", t);
+        if (t) {
+          document.documentElement.setAttribute("data-theme", t);
+          document.documentElement.style.colorScheme =
+            t === "paper" || t === "quartz" ? "light" : "dark";
+        }
       } catch (e) {}
     </script>
   </head>

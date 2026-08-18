@@ -1,6 +1,8 @@
 lax.exe
 pack/
+pack-linux/
 LaX-*.zip
+LaX-*-linux-*.tar.gz
 JetBrains_Mono*.zip
 node_modules/
 dist/
@@ -12,6 +14,7 @@ tmp/
 logs/
 etc/apps/
 usr/.install-root
+usr/apps/dbgate/node_modules
 www/*
 !www/index.php
 !www/hello/

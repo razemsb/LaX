@@ -12,6 +12,7 @@ const tabs = [
   { id: "mariadb", label: "MariaDB" },
   { id: "php", label: "PHP" },
   { id: "mailpit", label: "Mailpit" },
+  { id: "dbgate", label: "DbGate" },
 ];
 
 const lines = computed(() => {

@@ -39,6 +39,8 @@ pub struct LaxConfig {
     pub mysql_enabled: bool,
     #[serde(default = "default_theme")]
     pub theme: String,
+    #[serde(default = "default_db_admin", alias = "db_admin")]
+    pub db_admin: String,
 }
 
 fn default_mysql_enabled() -> bool {
@@ -49,8 +51,67 @@ fn default_theme() -> String {
     "noir".into()
 }
 
+fn default_db_admin() -> String {
+    "phpmyadmin".into()
+}
+
+pub fn normalize_db_admin(id: &str) -> String {
+    match id.trim().to_ascii_lowercase().as_str() {
+        "dbgate" | "adminer" => "dbgate".into(),
+        _ => "phpmyadmin".into(),
+    }
+}
+
 fn default_tld() -> String {
     "localhost".into()
+}
+
+fn default_web_server() -> String {
+    if cfg!(unix) {
+        "nginx".into()
+    } else {
+        "apache".into()
+    }
+}
+
+fn default_http_port() -> u16 {
+    if cfg!(unix) {
+        8080
+    } else {
+        80
+    }
+}
+
+fn default_php_version() -> String {
+    if cfg!(unix) {
+        "php-8.4".into()
+    } else {
+        "php-trash-8.2".into()
+    }
+}
+
+fn default_mysql_version() -> String {
+    if cfg!(unix) {
+        "mariadb-11.4.12".into()
+    } else {
+        "mariadb-10.11.13".into()
+    }
+}
+
+fn default_nginx_version() -> String {
+    if cfg!(unix) {
+        "nginx-1.28.3".into()
+    } else {
+        "nginx-1.14.0".into()
+    }
+}
+
+fn default_php_cgi_ports() -> Vec<u16> {
+    if cfg!(unix) {
+        vec![9003]
+    } else {
+        vec![9003, 9004]
+    }
 }
 
 impl Default for LaxConfig {
@@ -59,18 +120,19 @@ impl Default for LaxConfig {
             document_root: "www".into(),
             tld: "localhost".into(),
             auto_vhost: false,
-            web_server: "apache".into(),
-            apache_port: 80,
-            nginx_port: 80,
+            web_server: default_web_server(),
+            apache_port: default_http_port(),
+            nginx_port: default_http_port(),
             mysql_port: 3306,
-            php_version: "php-trash-8.2".into(),
-            mysql_version: "mariadb-10.11.13".into(),
-            nginx_version: "nginx-1.14.0".into(),
+            php_version: default_php_version(),
+            mysql_version: default_mysql_version(),
+            nginx_version: default_nginx_version(),
             apache_version: "Apache24".into(),
-            php_cgi_ports: vec![9003, 9004],
+            php_cgi_ports: default_php_cgi_ports(),
             auto_start: false,
             mysql_enabled: true,
             theme: "noir".into(),
+            db_admin: default_db_admin(),
         }
     }
 }
@@ -131,8 +193,11 @@ pub fn load_config(paths: &Paths) -> LaxResult<LaxConfig> {
         return Ok(cfg);
     }
     let raw = fs::read_to_string(&paths.config_file)?;
-    match toml::from_str(&raw) {
-        Ok(cfg) => Ok(cfg),
+    match toml::from_str::<LaxConfig>(&raw) {
+        Ok(mut cfg) => {
+            cfg.db_admin = normalize_db_admin(&cfg.db_admin);
+            Ok(cfg)
+        }
         Err(e) => {
             tracing::error!("lax.toml parse failed: {e}");
             Ok(LaxConfig::default())
@@ -158,6 +223,8 @@ pub fn ensure_runtime_dirs(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
         paths.root.join("etc/nginx/sites-enabled"),
         paths.root.join("logs"),
         paths.root.join("etc/apps/phpMyAdmin/tmp"),
+        paths.root.join("usr/apps/dbgate"),
+        paths.root.join("data/dbgate"),
         paths.apache_dir(cfg).join("logs"),
         paths.nginx_dir(cfg).join("logs"),
     ] {

@@ -7,7 +7,7 @@
 **Портативный локальный стек.**  
 Распаковал → `lax.exe` → `http://localhost/папка/`
 
-Apache · Nginx · MariaDB · PHP · Mailpit · GUI
+Apache · Nginx · MariaDB · PHP · Mailpit · DbGate · GUI
 
 [![release](https://img.shields.io/github/v/release/razemsb/LaX?color=E02430&label=release&style=for-the-badge)](https://github.com/razemsb/LaX/releases)
 [![windows](https://img.shields.io/badge/Windows-стек-111?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/razemsb/LaX/releases)
@@ -34,8 +34,8 @@ Apache · Nginx · MariaDB · PHP · Mailpit · GUI
 | **zip → exe** | **без Docker** | **www = сайты** |
 | никакого установщика и служб | стек едет с собой в папке | `localhost/имя/` сразу |
 
-> **Windows** — полный стек.  
-> **Linux** — пока только оболочка (AppImage), бинарников Apache/PHP там нет.
+> **Windows** — полный стек в zip.  
+> **Linux (Ubuntu, Fedora, Debian…)** — GUI (AppImage) + портативные бинарники: `bash scripts/fetch-linux-stack.sh`. Веб — **Nginx** (Apache на Linux нет). Порт по умолчанию **8080**.
 
 ---
 
@@ -82,7 +82,7 @@ Apache · Nginx · MariaDB · PHP · Mailpit · GUI
 Обзор     сервисы · сайты · базы · превью
 Проекты   шаблоны · ПКМ-команды · поиск
 PHP       версия · php.ini · Xdebug
-Логи      Apache / Nginx / MariaDB / PHP / Mailpit
+Логи      Apache / Nginx / MariaDB / PHP / Mailpit / DbGate
 Настройки порты · автостарт · обновления
 ```
 
@@ -147,10 +147,13 @@ MAIL_ENCRYPTION=null
 
 Нет `bin/mailpit/mailpit.exe` — `mail()` уходит в никуда. В репозитории: `npm run fetch-tools`.
 
-MariaDB из Обзора: создать базу · импорт `.sql` · phpMyAdmin на выбранную.  
+MariaDB из Обзора: создать базу · импорт `.sql` · открыть выбранную в GUI.  
 Дампа из GUI пока нет.
 
-phpMyAdmin → [http://localhost/phpmyadmin/](http://localhost/phpmyadmin/)
+В **Настройках** выбирается админка: **phpMyAdmin** или **DbGate**.
+
+phpMyAdmin → [http://localhost/phpmyadmin/](http://localhost/phpmyadmin/)  
+DbGate → [http://localhost:8030/](http://localhost:8030/)
 
 ---
 
@@ -181,6 +184,7 @@ mysqlEnabled  = true
 | PHP-CGI (Nginx) | `9003` `9004` |
 | Mailpit UI | `8025` |
 | Mailpit SMTP | `1025` |
+| DbGate | `8030` |
 | Xdebug → IDE | `9000` |
 | Vite dev | `5173` |
 
@@ -197,6 +201,7 @@ LaX/
 ├── data/mariadb/     базы
 ├── etc/              apache2 · nginx · phpMyAdmin
 ├── usr/lax.toml      настройки
+├── usr/apps/dbgate   веб-админка БД (после fetch-tools)
 ├── logs/             стек и падения GUI
 └── tmp/              обновления, wordpress.zip
 ```
@@ -217,7 +222,7 @@ LaX/
 git clone https://github.com/razemsb/LaX.git
 cd LaX
 npm install
-npm run fetch-tools     # Mailpit + Node → bin/
+npm run fetch-tools     # Mailpit + Node + DbGate
 npm run lax             # окно + hot reload
 npm run build:exe       # lax.exe в корне
 npm run pack            # портативное дерево → pack/
@@ -232,9 +237,27 @@ npm run pack            # портативное дерево → pack/
 | `npm run build` | типы + `dist/` |
 | `npm run build:exe` | релизный exe |
 | `npm run pack` | полный каталог |
-| `npm run fetch-tools` | Mailpit и Node |
+| `npm run fetch-tools` | Mailpit, Node и DbGate |
 
-Linux AppImage: тег `v*` или Actions → **Linux**. Это оболочка, не стек.
+Linux AppImage: тег `v*` или Actions → **Linux**. Рядом со стеком:
+
+```bash
+# Ubuntu / Fedora / Debian (x86_64 или aarch64), без apt/dnf стека
+bash scripts/fetch-linux-stack.sh
+# затем ./lax или AppImage в той же папке (bin/, usr/, www/)
+# сайт: http://localhost:8080/
+```
+
+| Linux | откуда |
+| --- | --- |
+| PHP 8.4 cli+fpm | [static-php](https://dl.static-php.dev/static-php-cli/common/) (musl, Ubuntu+Fedora) |
+| Nginx 1.28 | [nginx-binaries](https://github.com/jirutka/nginx-binaries) (static musl) |
+| MariaDB 11.4 | [generic linux tarball](https://archive.mariadb.org/) (glibc) |
+| Node 22 | nodejs.org linux-x64 / arm64 |
+| Mailpit | GitHub linux-amd64 / arm64 |
+| Composer | composer.phar |
+
+Apache на Linux не поставляется — нет портативного `httpd`. Включи Nginx. Порт 80 без root не слушается.
 
 ---
 

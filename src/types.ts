@@ -14,6 +14,7 @@ export interface LaxConfig {
   autoStart: boolean;
   mysqlEnabled: boolean;
   theme: string;
+  dbAdmin: string;
 }
 
 export interface ServiceInfo {
@@ -93,6 +94,7 @@ export interface Snapshot {
   portConflict: PortConflict | null;
   nodeAvailable: boolean;
   mailpitAvailable: boolean;
+  dbgateAvailable: boolean;
   appVersion: string;
   repoUrl: string;
   issuesUrl: string;

@@ -90,7 +90,14 @@ pub fn run() {
             let _ = tray.build(app);
 
             if let Some(win) = app.get_webview_window("main") {
-                paint_caption(&win);
+                let theme = app
+                    .state::<AppState>()
+                    .inner
+                    .lock()
+                    .ok()
+                    .map(|g| g.config.theme.clone())
+                    .unwrap_or_else(|| "noir".into());
+                apply_window_theme_to(&win, &theme);
                 let _ = win.set_title(&format!("LaX {}", crate::update::APP_VERSION));
                 let win_h = win.clone();
                 win.on_window_event(move |event| {
@@ -151,6 +158,7 @@ pub fn run() {
             commands::get_config,
             commands::save_config,
             commands::set_theme,
+            commands::set_db_admin,
             commands::read_logs,
             commands::list_php_extensions,
             commands::set_php_extension,
@@ -179,8 +187,37 @@ fn crash_log_dir() -> std::path::PathBuf {
     crate::paths::detect_root().join("logs")
 }
 
+pub(crate) fn apply_window_theme(app: &tauri::AppHandle, theme: &str) {
+    if let Some(win) = app.get_webview_window("main") {
+        apply_window_theme_to(&win, theme);
+    }
+}
+
+fn apply_window_theme_to(win: &tauri::WebviewWindow, theme: &str) {
+    let light = matches!(theme, "paper" | "quartz");
+    let _ = win.set_theme(Some(if light {
+        tauri::Theme::Light
+    } else {
+        tauri::Theme::Dark
+    }));
+    let (r, g, b) = ink_rgb(theme);
+    let _ = win.set_background_color(Some(tauri::window::Color(r, g, b, 255)));
+    paint_caption(win, theme);
+}
+
+fn ink_rgb(theme: &str) -> (u8, u8, u8) {
+    match theme {
+        "paper" => (0xef, 0xe9, 0xdc),
+        "quartz" => (0xe8, 0xeb, 0xf1),
+        "midnight" => (0x07, 0x0b, 0x14),
+        "glass" => (0x10, 0x18, 0x2a),
+        "obsidian" => (0x0c, 0x10, 0x0e),
+        _ => (0x09, 0x09, 0x0b),
+    }
+}
+
 #[cfg(windows)]
-fn paint_caption(win: &tauri::WebviewWindow) {
+fn paint_caption(win: &tauri::WebviewWindow, theme: &str) {
     use windows_sys::Win32::Graphics::Dwm::{
         DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_CAPTION_COLOR,
         DWMWA_SYSTEMBACKDROP_TYPE, DWMWA_TEXT_COLOR, DWMWA_USE_IMMERSIVE_DARK_MODE,
@@ -189,10 +226,15 @@ fn paint_caption(win: &tauri::WebviewWindow) {
     let Ok(hwnd) = win.hwnd() else {
         return;
     };
-    // Match --color-ink #0c0c0d (COLORREF is 0x00BBGGRR).
-    let caption: u32 = 0x000D_0C0C;
-    let text: u32 = 0x00F3_F2F2;
-    let dark: i32 = 1;
+    let (r, g, b) = ink_rgb(theme);
+    let light = matches!(theme, "paper" | "quartz");
+    let caption: u32 = (b as u32) << 16 | (g as u32) << 8 | r as u32;
+    let text: u32 = if light {
+        0x0012_141A
+    } else {
+        0x00F3_F2F2
+    };
+    let dark: i32 = if light { 0 } else { 1 };
     let backdrop: i32 = 1; // DWMSBT_NONE — solid caption, no Mica tint
     unsafe {
         let hwnd = hwnd.0 as *mut core::ffi::c_void;
@@ -230,5 +272,5 @@ fn paint_caption(win: &tauri::WebviewWindow) {
 }
 
 #[cfg(not(windows))]
-fn paint_caption(_win: &tauri::WebviewWindow) {}
+fn paint_caption(_win: &tauri::WebviewWindow, _theme: &str) {}
 

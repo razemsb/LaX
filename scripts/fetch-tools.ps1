@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Download portable Mailpit + Node into bin/ so the stack does not need system installs.
+  Download portable Mailpit + Node + DbGate so the stack does not need system installs.
 #>
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
@@ -76,6 +76,50 @@ if (-not (Test-Path $nodeExe)) {
     Write-Host "ok $nodeExe"
 } else {
     Write-Host "skip Node (already in bin/node)"
+}
+
+# --- DbGate (web, community) ---
+$dbgateDir = Join-Path $Root "usr\apps\dbgate"
+$dbgateJs = Join-Path $dbgateDir "node_modules\dbgate-serve\bin\dbgate-serve.js"
+if (-not (Test-Path $dbgateJs)) {
+    Write-Host "==> DbGate (dbgate-serve)"
+    if (-not (Test-Path $nodeExe)) {
+        throw "Node missing. Cannot install DbGate."
+    }
+    New-Item -ItemType Directory -Force -Path $dbgateDir | Out-Null
+    $pkg = Join-Path $dbgateDir "package.json"
+    if (-not (Test-Path $pkg)) {
+        Set-Content -Path $pkg -Encoding UTF8 -Value @'
+{
+  "name": "lax-dbgate",
+  "private": true,
+  "dependencies": {
+    "dbgate-serve": "7.2.5"
+  }
+}
+'@
+    }
+    $npmCli = Join-Path $nodeDir "node_modules\npm\bin\npm-cli.js"
+    if (-not (Test-Path $npmCli)) {
+        $npmCli = Join-Path $nodeDir "npm.cmd"
+    }
+    Push-Location $dbgateDir
+    try {
+        if (Test-Path (Join-Path $nodeDir "node_modules\npm\bin\npm-cli.js")) {
+            & $nodeExe (Join-Path $nodeDir "node_modules\npm\bin\npm-cli.js") install --omit=dev --no-fund --no-audit
+        } else {
+            & (Join-Path $nodeDir "npm.cmd") install --omit=dev --no-fund --no-audit
+        }
+        if ($LASTEXITCODE -ne 0) { throw "npm install dbgate-serve failed ($LASTEXITCODE)" }
+    } finally {
+        Pop-Location
+    }
+    if (-not (Test-Path $dbgateJs)) {
+        throw "DbGate missing after npm install: $dbgateJs"
+    }
+    Write-Host "ok $dbgateJs"
+} else {
+    Write-Host "skip DbGate (already in usr/apps/dbgate)"
 }
 
 Write-Host "done"

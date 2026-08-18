@@ -136,23 +136,18 @@ pub fn open_terminal(dir: &Path, cmdline: Option<&str>, path_prefix: Option<&str
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".into());
         let run = match cmdline {
             Some(line) => format!("{line}; exec {shell}"),
-            None => shell.clone(),
+            None => format!("exec {shell}"),
         };
-        let mut cmd = Command::new("x-terminal-emulator");
-        cmd.args(["-e", &shell, "-lc", &run]).current_dir(dir);
-        apply_path_prefix(&mut cmd, path_prefix);
-        match cmd.spawn() {
-            Ok(_) => Ok(()),
-            Err(_) => {
-                let mut fallback = Command::new(&shell);
-                fallback.arg("-lc").arg(&run).current_dir(dir);
-                apply_path_prefix(&mut fallback, path_prefix);
-                fallback
-                    .spawn()
-                    .map(|_| ())
-                    .map_err(|e| e.to_string())
-            }
+        if spawn_linux_terminal(dir, &run, path_prefix).is_ok() {
+            return Ok(());
         }
+        let mut fallback = Command::new(&shell);
+        fallback.arg("-lc").arg(&run).current_dir(dir);
+        apply_path_prefix(&mut fallback, path_prefix);
+        fallback
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
     }
 }
 
@@ -163,6 +158,102 @@ fn apply_path_prefix(cmd: &mut Command, path_prefix: Option<&str>) {
             cmd.env("PATH", format!("{prefix}{}{rest}", path_sep()));
         }
     }
+}
+
+#[cfg(not(windows))]
+fn spawn_linux_terminal(
+    dir: &Path,
+    run: &str,
+    path_prefix: Option<&str>,
+) -> Result<(), String> {
+    let dir_s = dir.to_string_lossy().into_owned();
+    let attempts: [(&str, Vec<String>); 7] = [
+        (
+            "gnome-terminal",
+            vec![
+                "--working-directory".into(),
+                dir_s.clone(),
+                "--".into(),
+                "bash".into(),
+                "-lc".into(),
+                run.into(),
+            ],
+        ),
+        (
+            "ptyxis",
+            vec![
+                "--new-window".into(),
+                "--directory".into(),
+                dir_s.clone(),
+                "-x".into(),
+                "bash".into(),
+                "-lc".into(),
+                run.into(),
+            ],
+        ),
+        (
+            "konsole",
+            vec![
+                "--workdir".into(),
+                dir_s.clone(),
+                "-e".into(),
+                "bash".into(),
+                "-lc".into(),
+                run.into(),
+            ],
+        ),
+        (
+            "xfce4-terminal",
+            vec![
+                format!("--working-directory={dir_s}"),
+                "-e".into(),
+                format!("bash -lc {run:?}"),
+            ],
+        ),
+        (
+            "kitty",
+            vec![
+                format!("--directory={dir_s}"),
+                "bash".into(),
+                "-lc".into(),
+                run.into(),
+            ],
+        ),
+        (
+            "x-terminal-emulator",
+            vec!["-e".into(), "bash".into(), "-lc".into(), run.into()],
+        ),
+        (
+            "xterm",
+            vec!["-e".into(), "bash".into(), "-lc".into(), run.into()],
+        ),
+    ];
+    for (prog, args) in attempts {
+        if find_in_path(prog).is_none() {
+            continue;
+        }
+        let mut cmd = Command::new(prog);
+        cmd.args(&args).current_dir(dir);
+        apply_path_prefix(&mut cmd, path_prefix);
+        if cmd.spawn().is_ok() {
+            return Ok(());
+        }
+    }
+    Err("no terminal emulator found".into())
+}
+
+#[cfg(not(windows))]
+fn find_in_path(name: &str) -> Option<std::path::PathBuf> {
+    let Ok(paths) = std::env::var("PATH") else {
+        return None;
+    };
+    for p in paths.split(':') {
+        let cand = std::path::Path::new(p).join(name);
+        if cand.is_file() {
+            return Some(cand);
+        }
+    }
+    None
 }
 
 pub fn kill_pid(pid: u32) {

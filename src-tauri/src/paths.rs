@@ -11,6 +11,15 @@ pub fn detect_root() -> PathBuf {
         return PathBuf::from(v);
     }
 
+    // AppImage: the .AppImage file lives next to bin/, not the mounted squashfs exe.
+    if let Ok(appimage) = std::env::var("APPIMAGE") {
+        if let Some(dir) = Path::new(&appimage).parent() {
+            if looks_like_root(dir) {
+                return canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+            }
+        }
+    }
+
     // Portable layout: lax.exe sits next to bin/, usr/, www/ (like laragon.exe).
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
@@ -39,7 +48,11 @@ pub fn detect_root() -> PathBuf {
 }
 
 fn looks_like_root(p: &Path) -> bool {
-    p.join("usr").join("lax.toml").exists() || p.join("bin").join("apache").exists()
+    p.join("usr").join("lax.toml").exists()
+        || p.join("bin").join("apache").exists()
+        || p.join("bin").join("nginx").exists()
+        || p.join("bin").join("php").exists()
+        || p.join("bin").join("mysql").exists()
 }
 
 pub fn join_unix(root: &Path, rel: &str) -> PathBuf {

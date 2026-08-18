@@ -28,6 +28,7 @@ try {
     $lax = @($names | Where-Object { $_ -eq "lax.exe" }).Count
     $index = @($names | Where-Object { $_ -eq "www/index.html" -or $_ -eq "www\index.html" }).Count
     $hello = @($names | Where-Object { $_ -like "www/hello*" -or $_ -like "www\hello*" }).Count
+    $npm = @($names | Where-Object { $_ -replace '\\','/' -like "bin/node/node_modules/npm/bin/npm-cli.js" }).Count
     Write-Host "ZIP=$($info.FullName)"
     Write-Host ("SIZE_MB={0}" -f [math]::Round($info.Length / 1MB, 1))
     Write-Host "ENTRIES=$($archive.Entries.Count)"
@@ -41,6 +42,7 @@ try {
     if ($index -lt 1) { throw "www/index.html missing" }
     if ($dot -gt 0) { throw "zip has ./ prefixes" }
     if ($hello -gt 0) { throw "www still contains hello demo" }
+    if ($npm -lt 1) { throw "bin/node/node_modules/npm missing (npm was stripped)" }
     Write-Host "ZIP_OK"
 }
 finally {

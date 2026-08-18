@@ -1,7 +1,7 @@
 {
   "name": "lax",
   "private": true,
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,9 @@
     "lax": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev.ps1",
     "build:exe": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1",
     "pack": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack.ps1",
-    "fetch-tools": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-tools.ps1"
+    "fetch-tools": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fetch-tools.ps1",
+    "fetch-linux": "bash scripts/fetch-linux-stack.sh",
+    "pack-linux": "bash scripts/pack-linux.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

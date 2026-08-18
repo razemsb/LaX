@@ -21,6 +21,7 @@ const form = reactive<LaxConfig>({
   autoStart: false,
   mysqlEnabled: true,
   theme: "noir",
+  dbAdmin: "phpmyadmin",
 });
 
 watch(
@@ -80,6 +81,32 @@ async function save() {
           <option value="nginx">Nginx</option>
         </select>
       </label>
+      <div>
+        <div class="mb-2 eyebrow">панель баз</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            class="theme-card"
+            :aria-pressed="(store.snap.config.dbAdmin || 'phpmyadmin') !== 'dbgate'"
+            @click="store.setDbAdmin('phpmyadmin')"
+          >
+            <div class="text-sm">phpMyAdmin</div>
+            <div class="mt-1 text-[11px] text-muted">через Apache / Nginx</div>
+          </button>
+          <button
+            type="button"
+            class="theme-card"
+            :aria-pressed="store.snap.config.dbAdmin === 'dbgate'"
+            @click="store.setDbAdmin('dbgate')"
+          >
+            <div class="text-sm">DbGate</div>
+            <div class="mt-1 text-[11px] text-muted">веб, порт 8030</div>
+          </button>
+        </div>
+        <p class="mt-2 text-[11px] text-muted">
+          DbGate ставится через npm run fetch-tools и поднимается со стеком.
+        </p>
+      </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label class="text-xs text-muted">Apache<input v-model.number="form.apachePort" type="number" class="field mt-1" /></label>
         <label class="text-xs text-muted">Nginx<input v-model.number="form.nginxPort" type="number" class="field mt-1" /></label>

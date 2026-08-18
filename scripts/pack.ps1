@@ -7,7 +7,8 @@ function Invoke-Robo($From, $To, $ExcludeDirs = @()) {
     if (-not (Test-Path $From)) { return }
     New-Item -ItemType Directory -Force -Path $To | Out-Null
     $args = @($From, $To, "/E", "/NFL", "/NDL", "/NJH", "/NJS", "/NC", "/NS", "/NP", "/R:1", "/W:1", "/XD")
-    $args += @($ExcludeDirs + @("logs", "tmp", "node_modules", ".git", "phpMyAdmin-5.2.0-english"))
+    # Do not exclude node_modules globally: Node's npm lives in bin/node/node_modules.
+    $args += @($ExcludeDirs + @("logs", "tmp", ".git", "phpMyAdmin-5.2.0-english"))
     $args += @("/XF", "*.pdb", "*.log")
     & robocopy @args | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy failed ($LASTEXITCODE): $From" }
@@ -30,6 +31,10 @@ if (-not (Test-Path $exe)) {
 Copy-Item $exe (Join-Path $Dest "lax.exe") -Force
 
 Invoke-Robo "$Root\bin" "$Dest\bin" @("logs")
+$npmCli = Join-Path $Dest "bin\node\node_modules\npm\bin\npm-cli.js"
+if (-not (Test-Path $npmCli)) {
+    throw "npm missing in pack: $npmCli"
+}
 Invoke-Robo "$Root\etc" "$Dest\etc" @("tmp")
 Invoke-Robo "$Root\usr" "$Dest\usr"
 Invoke-Robo "$Root\data" "$Dest\data"

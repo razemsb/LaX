@@ -27,116 +27,123 @@
 
 :root,
 [data-theme="noir"] {
-  --ink: #0a0a0b;
-  --panel: #141414;
-  --panel-2: #1c1c1c;
-  --line: #2c2c2e;
-  --muted: #8a8a8e;
-  --text: #f4f4f5;
+  --ink: #09090b;
+  --panel: #161618;
+  --panel-2: #1e1e21;
+  --line: #2a2a2e;
+  --muted: #8b8b90;
+  --text: #f3f3f4;
   --accent: #e02430;
   --ok: #3dd68c;
   --warn: #c9a227;
-  --lift: rgba(255, 255, 255, 0.05);
+  --lift: #1c1c1f;
   --dot: #3a3a3e;
-  --field: rgba(0, 0, 0, 0.28);
+  --field: #101012;
   --glow: transparent;
   --surface: var(--panel);
   --radius: 14px;
-  --glass: 0;
+  --elev: inset 0 1px 0 #2a2a2e;
 }
 
 [data-theme="paper"] {
-  --ink: #f3f0e8;
-  --panel: #fffcf7;
-  --panel-2: #ece7dc;
-  --line: #ddd6c8;
-  --muted: #6d675c;
-  --text: #1b1914;
+  --ink: #efe9dc;
+  --panel: #fffdf8;
+  --panel-2: #f3ece0;
+  --line: #e0d6c6;
+  --muted: #6a6358;
+  --text: #1a1712;
   --accent: #c42b2b;
   --ok: #1f8a58;
   --warn: #9a7420;
-  --lift: rgba(20, 16, 8, 0.05);
-  --dot: #c4bdb0;
+  --lift: #f3ece0;
+  --dot: #c9c0b2;
   --field: #fff;
   --glow: transparent;
   --surface: var(--panel);
-  --glass: 0;
+  --radius: 14px;
+  --elev: inset 0 1px 0 #fff;
 }
 
 [data-theme="midnight"] {
-  --ink: #080c16;
-  --panel: #10182a;
-  --panel-2: #182238;
-  --line: #27324a;
+  --ink: #070b14;
+  --panel: #10192c;
+  --panel-2: #182338;
+  --line: #2a3650;
   --muted: #8b97b0;
   --text: #e8eef8;
   --accent: #e24b56;
   --ok: #3dd6b0;
   --warn: #d4b45a;
-  --lift: rgba(255, 255, 255, 0.05);
+  --lift: #182338;
   --dot: #3a4660;
-  --field: rgba(0, 0, 0, 0.28);
-  --glow: rgba(80, 120, 220, 0.12);
+  --field: #0c1220;
+  --glow: transparent;
   --surface: var(--panel);
-  --glass: 0;
+  --radius: 14px;
+  --elev: inset 0 1px 0 #2a3650;
 }
 
 [data-theme="quartz"] {
-  --ink: #eceef2;
+  --ink: #e8ebf1;
   --panel: #ffffff;
-  --panel-2: #e4e7ee;
-  --line: #d0d5de;
+  --panel-2: #eef0f5;
+  --line: #d4d9e2;
   --muted: #667085;
   --text: #12141a;
   --accent: #d21f2b;
   --ok: #0f9f6e;
   --warn: #a07c20;
-  --lift: rgba(16, 20, 32, 0.05);
+  --lift: #eef0f5;
   --dot: #c5cad3;
-  --field: #f7f8fa;
+  --field: #f6f7fa;
   --glow: transparent;
   --surface: var(--panel);
-  --glass: 0;
+  --radius: 14px;
+  --elev: inset 0 1px 0 #fff;
 }
 
 [data-theme="glass"] {
-  --ink: #07080e;
-  --panel: rgba(16, 18, 28, 0.78);
-  --panel-2: rgba(255, 255, 255, 0.1);
-  --line: rgba(255, 255, 255, 0.16);
-  --muted: #a8aebc;
-  --text: #f5f6fa;
-  --accent: #ff5a66;
-  --ok: #5ee0a8;
-  --warn: #e2c56a;
-  --lift: rgba(255, 255, 255, 0.08);
-  --dot: rgba(255, 255, 255, 0.28);
-  --field: rgba(0, 0, 0, 0.35);
-  --glow: rgba(120, 160, 255, 0.2);
-  --surface: rgba(14, 16, 24, 0.72);
-  --radius: 18px;
-  --glass: 1;
+  --ink: #10182a;
+  --panel: #182238;
+  --panel-2: #1e2a42;
+  --line: #3a4a66;
+  --muted: #9aa6bc;
+  --text: #f3f6fb;
+  --accent: #e02430;
+  --ok: #4fd4a4;
+  --warn: #e0c36a;
+  --lift: #243044;
+  --dot: #4a5a74;
+  --field: #0e1624;
+  --glow: transparent;
+  --surface: #1a243c;
+  --radius: 16px;
+  --elev: inset 0 1px 0 #3d4e6c;
 }
 
 [data-theme="obsidian"] {
-  --ink: #050605;
-  --panel: rgba(12, 18, 14, 0.8);
-  --panel-2: rgba(70, 120, 90, 0.14);
-  --line: rgba(140, 200, 160, 0.18);
-  --muted: #9aa89e;
-  --text: #eef4ef;
+  --ink: #0c100e;
+  --panel: #161c18;
+  --panel-2: #1c2420;
+  --line: #2e3a34;
+  --muted: #93a199;
+  --text: #eef3ef;
   --accent: #e02430;
   --ok: #62e0a0;
   --warn: #d4b45a;
-  --lift: rgba(180, 255, 210, 0.07);
-  --dot: rgba(180, 220, 190, 0.28);
-  --field: rgba(0, 0, 0, 0.4);
-  --glow: rgba(60, 180, 110, 0.18);
-  --surface: rgba(10, 14, 11, 0.74);
-  --radius: 18px;
-  --glass: 1;
+  --lift: #1e2822;
+  --dot: #445248;
+  --field: #0a0e0c;
+  --glow: transparent;
+  --surface: #181e1a;
+  --radius: 16px;
+  --elev: inset 0 1px 0 #2c3830;
 }
 
+html {
+  height: 100%;
+  background: var(--ink);
+}
 html, body, #app { height: 100%; }
 :root, [data-theme="noir"], [data-theme="midnight"], [data-theme="glass"], [data-theme="obsidian"] {
   color-scheme: dark;
@@ -151,67 +158,15 @@ body {
   background: var(--ink);
 }
 
-.liquid-bg {
-  display: none;
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-}
-.liquid-bg::before {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  filter: blur(64px) saturate(1.2);
-  animation: liquid 22s ease-in-out infinite alternate;
-}
-[data-theme="glass"] .liquid-bg,
-[data-theme="obsidian"] .liquid-bg {
-  display: block;
-}
-[data-theme="glass"] .liquid-bg::before {
-  background:
-    radial-gradient(ellipse 36% 30% at 12% 8%, rgba(224, 36, 48, 0.38), transparent 58%),
-    radial-gradient(ellipse 32% 28% at 92% 6%, rgba(90, 140, 255, 0.22), transparent 55%),
-    radial-gradient(ellipse 40% 34% at 80% 92%, rgba(80, 220, 180, 0.14), transparent 58%);
-}
-[data-theme="obsidian"] .liquid-bg::before {
-  background:
-    radial-gradient(ellipse 34% 28% at 10% 12%, rgba(224, 36, 48, 0.26), transparent 56%),
-    radial-gradient(ellipse 36% 32% at 90% 10%, rgba(50, 180, 110, 0.2), transparent 55%),
-    radial-gradient(ellipse 42% 36% at 36% 96%, rgba(20, 80, 50, 0.3), transparent 60%);
-}
-@keyframes liquid {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(-4%, 3%) scale(1.06); }
-}
-
 .app-root {
-  position: relative;
-  isolation: isolate;
   background: var(--ink);
-}
-.shell-ui {
-  position: relative;
-  z-index: 1;
 }
 
 .surface {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-}
-[data-theme="glass"] .surface,
-[data-theme="obsidian"] .surface,
-[data-theme="glass"] .ctx-menu,
-[data-theme="obsidian"] .ctx-menu,
-[data-theme="glass"] aside,
-[data-theme="obsidian"] aside,
-[data-theme="glass"] header,
-[data-theme="obsidian"] header {
-  backdrop-filter: blur(22px) saturate(1.4);
-  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  box-shadow: var(--elev);
 }
 button.surface:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--line) 60%, var(--text));
@@ -228,9 +183,9 @@ button.surface:hover:not(:disabled) {
   color: #fff;
 }
 .btn-accent:hover:not(:disabled) {
-  filter: brightness(1.08);
+  background: color-mix(in srgb, var(--accent) 86%, #fff);
 }
-.btn-accent:disabled { opacity: 0.4; filter: none; }
+.btn-accent:disabled { opacity: 0.4; }
 
 .btn-ghost {
   border: 1px solid var(--line);

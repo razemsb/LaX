@@ -27,6 +27,7 @@ pub fn php_versions(root: &Path) -> Vec<String> {
             let d = root.join("bin").join("php").join(n);
             crate::platform::bin_path(&d, "php").exists()
                 || crate::platform::bin_path(&d, "php-cgi").exists()
+                || crate::platform::bin_path(&d, "php-fpm").exists()
         })
         .collect()
 }
@@ -53,11 +54,19 @@ pub fn node_bin_dir(root: &Path) -> Option<std::path::PathBuf> {
         if crate::platform::bin_path(&d, "node").exists() {
             return Some(d);
         }
+        let nested = d.join("bin");
+        if crate::platform::bin_path(&nested, "node").exists() {
+            return Some(nested);
+        }
         if let Ok(rd) = fs::read_dir(&d) {
             for ent in rd.flatten() {
                 let p = ent.path();
                 if p.is_dir() && crate::platform::bin_path(&p, "node").exists() {
                     return Some(p);
+                }
+                let nested = p.join("bin");
+                if p.is_dir() && crate::platform::bin_path(&nested, "node").exists() {
+                    return Some(nested);
                 }
             }
         }
@@ -74,6 +83,10 @@ pub fn tools_path_prefix(root: &Path, php_dir: &Path) -> String {
     }
     if let Some(node) = node_bin_dir(root) {
         parts.push(node.to_string_lossy().into_owned());
+    }
+    let composer = root.join("bin").join("composer");
+    if composer.is_dir() {
+        parts.push(composer.to_string_lossy().into_owned());
     }
     parts.join(&sep.to_string())
 }

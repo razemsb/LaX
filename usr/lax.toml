@@ -16,3 +16,4 @@ phpCgiPorts = [
 autoStart = false
 mysqlEnabled = true
 theme = "noir"
+dbAdmin = "dbgate"
