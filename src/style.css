@@ -101,9 +101,9 @@
 
 [data-theme="glass"] {
   --ink: #07080e;
-  --panel: rgba(22, 24, 34, 0.42);
-  --panel-2: rgba(255, 255, 255, 0.08);
-  --line: rgba(255, 255, 255, 0.14);
+  --panel: rgba(16, 18, 28, 0.78);
+  --panel-2: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.16);
   --muted: #a8aebc;
   --text: #f5f6fa;
   --accent: #ff5a66;
@@ -111,28 +111,28 @@
   --warn: #e2c56a;
   --lift: rgba(255, 255, 255, 0.08);
   --dot: rgba(255, 255, 255, 0.28);
-  --field: rgba(0, 0, 0, 0.28);
+  --field: rgba(0, 0, 0, 0.35);
   --glow: rgba(120, 160, 255, 0.2);
-  --surface: rgba(18, 20, 30, 0.38);
+  --surface: rgba(14, 16, 24, 0.72);
   --radius: 18px;
   --glass: 1;
 }
 
 [data-theme="obsidian"] {
   --ink: #050605;
-  --panel: rgba(16, 22, 18, 0.48);
-  --panel-2: rgba(70, 120, 90, 0.12);
-  --line: rgba(140, 200, 160, 0.16);
+  --panel: rgba(12, 18, 14, 0.8);
+  --panel-2: rgba(70, 120, 90, 0.14);
+  --line: rgba(140, 200, 160, 0.18);
   --muted: #9aa89e;
   --text: #eef4ef;
   --accent: #e02430;
   --ok: #62e0a0;
   --warn: #d4b45a;
-  --lift: rgba(180, 255, 210, 0.06);
+  --lift: rgba(180, 255, 210, 0.07);
   --dot: rgba(180, 220, 190, 0.28);
-  --field: rgba(0, 0, 0, 0.35);
+  --field: rgba(0, 0, 0, 0.4);
   --glow: rgba(60, 180, 110, 0.18);
-  --surface: rgba(12, 16, 13, 0.42);
+  --surface: rgba(10, 14, 11, 0.74);
   --radius: 18px;
   --glass: 1;
 }
@@ -154,36 +154,48 @@ body {
 .liquid-bg {
   display: none;
   pointer-events: none;
-  position: fixed;
-  inset: -18%;
+  position: absolute;
+  inset: 0;
   z-index: 0;
-  filter: blur(48px) saturate(1.25);
+  overflow: hidden;
+}
+.liquid-bg::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  filter: blur(64px) saturate(1.2);
   animation: liquid 22s ease-in-out infinite alternate;
 }
 [data-theme="glass"] .liquid-bg,
 [data-theme="obsidian"] .liquid-bg {
   display: block;
 }
-[data-theme="glass"] .liquid-bg {
+[data-theme="glass"] .liquid-bg::before {
   background:
-    radial-gradient(ellipse 42% 36% at 18% 18%, rgba(224, 36, 48, 0.42), transparent 58%),
-    radial-gradient(ellipse 38% 32% at 86% 12%, rgba(90, 140, 255, 0.28), transparent 55%),
-    radial-gradient(ellipse 48% 40% at 72% 82%, rgba(80, 220, 180, 0.16), transparent 58%),
-    #07080e;
+    radial-gradient(ellipse 36% 30% at 12% 8%, rgba(224, 36, 48, 0.38), transparent 58%),
+    radial-gradient(ellipse 32% 28% at 92% 6%, rgba(90, 140, 255, 0.22), transparent 55%),
+    radial-gradient(ellipse 40% 34% at 80% 92%, rgba(80, 220, 180, 0.14), transparent 58%);
 }
-[data-theme="obsidian"] .liquid-bg {
+[data-theme="obsidian"] .liquid-bg::before {
   background:
-    radial-gradient(ellipse 40% 34% at 12% 24%, rgba(224, 36, 48, 0.28), transparent 56%),
-    radial-gradient(ellipse 44% 38% at 88% 20%, rgba(50, 180, 110, 0.22), transparent 55%),
-    radial-gradient(ellipse 50% 42% at 40% 90%, rgba(20, 80, 50, 0.35), transparent 60%),
-    #050605;
+    radial-gradient(ellipse 34% 28% at 10% 12%, rgba(224, 36, 48, 0.26), transparent 56%),
+    radial-gradient(ellipse 36% 32% at 90% 10%, rgba(50, 180, 110, 0.2), transparent 55%),
+    radial-gradient(ellipse 42% 36% at 36% 96%, rgba(20, 80, 50, 0.3), transparent 60%);
 }
 @keyframes liquid {
   0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(-5%, 4%) scale(1.07); }
+  100% { transform: translate(-4%, 3%) scale(1.06); }
 }
 
-.app-root { position: relative; z-index: 1; }
+.app-root {
+  position: relative;
+  isolation: isolate;
+  background: var(--ink);
+}
+.shell-ui {
+  position: relative;
+  z-index: 1;
+}
 
 .surface {
   background: var(--surface);
@@ -193,12 +205,13 @@ body {
 [data-theme="glass"] .surface,
 [data-theme="obsidian"] .surface,
 [data-theme="glass"] .ctx-menu,
-[data-theme="obsidian"] .ctx-menu {
-  backdrop-filter: blur(28px) saturate(1.55);
-  -webkit-backdrop-filter: blur(28px) saturate(1.55);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 12px 40px -24px rgba(0, 0, 0, 0.7);
+[data-theme="obsidian"] .ctx-menu,
+[data-theme="glass"] aside,
+[data-theme="obsidian"] aside,
+[data-theme="glass"] header,
+[data-theme="obsidian"] header {
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
 }
 button.surface:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--line) 60%, var(--text));

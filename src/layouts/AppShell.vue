@@ -124,7 +124,7 @@ onUnmounted(() => {
   <div class="app-root flex h-full min-h-0" @contextmenu="onRootContext">
     <div class="liquid-bg" aria-hidden="true" />
     <ContextMenu />
-    <aside class="flex w-14 shrink-0 flex-col border-r border-line md:w-16 xl:w-56">
+    <aside class="shell-ui flex w-14 shrink-0 flex-col border-r border-line md:w-16 xl:w-56">
       <div
         class="flex items-center justify-center gap-3 px-2 py-4 xl:justify-start xl:px-5 xl:py-5"
         :title="store.snap ? `LaX v${store.snap.appVersion}` : 'LaX'"
@@ -180,7 +180,7 @@ onUnmounted(() => {
       </div>
     </aside>
 
-    <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div class="shell-ui flex min-h-0 min-w-0 flex-1 flex-col">
       <header class="flex items-center justify-between gap-3 border-b border-line px-3 py-2.5 sm:px-5 xl:px-8 xl:py-4">
         <div class="min-w-0">
           <div class="truncate text-base font-semibold xl:text-lg">{{ route.name }}</div>
