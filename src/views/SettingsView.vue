@@ -22,18 +22,33 @@ const form = reactive<LaxConfig>({
   mysqlEnabled: true,
   theme: "noir",
   dbAdmin: "phpmyadmin",
+  startWeb: true,
+  startMailpit: true,
+  startDbGate: false,
 });
 
 watch(
   () => store.snap?.config,
   (cfg) => {
-    if (cfg) Object.assign(form, cfg);
+    if (!cfg) return;
+    Object.assign(form, cfg);
+    form.startWeb = cfg.startWeb ?? true;
+    form.startMailpit = cfg.startMailpit ?? true;
+    form.startDbGate = cfg.startDbGate ?? cfg.dbAdmin === "dbgate";
   },
   { immediate: true },
 );
 
 async function save() {
   await store.saveConfig({ ...form, theme: store.snap?.config.theme ?? form.theme });
+}
+
+async function pickDbAdmin(id: "phpmyadmin" | "dbgate") {
+  if (id === "dbgate" && !store.snap?.dbgateAvailable) {
+    await store.installDbGate();
+    return;
+  }
+  await store.setDbAdmin(id);
 }
 </script>
 
@@ -88,37 +103,75 @@ async function save() {
             type="button"
             class="theme-card"
             :aria-pressed="(store.snap.config.dbAdmin || 'phpmyadmin') !== 'dbgate'"
-            @click="store.setDbAdmin('phpmyadmin')"
+            @click="pickDbAdmin('phpmyadmin')"
           >
             <div class="text-sm">phpMyAdmin</div>
-            <div class="mt-1 text-[11px] text-muted">через Apache / Nginx</div>
+            <div class="mt-1 text-[11px] text-muted">в zip, через Apache / Nginx</div>
           </button>
           <button
             type="button"
             class="theme-card"
             :aria-pressed="store.snap.config.dbAdmin === 'dbgate'"
-            @click="store.setDbAdmin('dbgate')"
+            :disabled="store.busy"
+            @click="pickDbAdmin('dbgate')"
           >
             <div class="text-sm">DbGate</div>
-            <div class="mt-1 text-[11px] text-muted">веб, порт 8030</div>
+            <div class="mt-1 text-[11px] text-muted">
+              {{ store.snap.dbgateAvailable ? "веб, порт 8030" : "не в zip · скачать ~350 МБ" }}
+            </div>
           </button>
         </div>
         <p class="mt-2 text-[11px] text-muted">
-          DbGate ставится через npm run fetch-tools и поднимается со стеком.
+          phpMyAdmin едет в релизе. DbGate ставится кнопкой выше, один раз, после установки или обновления.
         </p>
+        <button
+          v-if="!store.snap.dbgateAvailable"
+          type="button"
+          class="btn-accent mt-3 rounded-lg px-4 py-2 text-sm font-medium"
+          :disabled="store.busy"
+          @click="store.installDbGate()"
+        >
+          Скачать DbGate
+        </button>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label class="text-xs text-muted">Apache<input v-model.number="form.apachePort" type="number" class="field mt-1" /></label>
         <label class="text-xs text-muted">Nginx<input v-model.number="form.nginxPort" type="number" class="field mt-1" /></label>
         <label class="text-xs text-muted">MySQL<input v-model.number="form.mysqlPort" type="number" class="field mt-1" /></label>
       </div>
-      <label class="flex items-center gap-2 text-sm">
-        <input v-model="form.mysqlEnabled" type="checkbox" class="accent-[var(--accent)]" />
-        Поднимать MariaDB вместе со стеком
-      </label>
+      <div>
+        <div class="mb-2 eyebrow">кнопка «Запустить все»</div>
+        <p class="mb-3 text-[11px] text-muted">только отмеченные службы. phpMyAdmin идёт через веб-сервер, отдельный процесс не нужен.</p>
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 text-sm">
+            <input v-model="form.startWeb" type="checkbox" class="accent-[var(--accent)]" />
+            Веб-сервер ({{ form.webServer === "nginx" ? "Nginx" : "Apache" }} + PHP)
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input v-model="form.mysqlEnabled" type="checkbox" class="accent-[var(--accent)]" />
+            MariaDB
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input v-model="form.startMailpit" type="checkbox" class="accent-[var(--accent)]" />
+            Mailpit
+          </label>
+          <label class="flex items-center gap-2 text-sm" :class="{ 'opacity-50': !store.snap.dbgateAvailable }">
+            <input
+              v-model="form.startDbGate"
+              type="checkbox"
+              class="accent-[var(--accent)]"
+              :disabled="!store.snap.dbgateAvailable"
+            />
+            DbGate
+          </label>
+        </div>
+        <p v-if="form.dbAdmin !== 'dbgate' && form.startDbGate" class="mt-2 text-[11px] text-muted">
+          Панель баз — phpMyAdmin, но DbGate всё равно поднимется. Сними галку, если не нужен.
+        </p>
+      </div>
       <label class="flex items-center gap-2 text-sm">
         <input v-model="form.autoStart" type="checkbox" class="accent-[var(--accent)]" />
-        При открытии LaX сразу запускать Apache и MariaDB
+        При открытии LaX сразу жать «Запустить все»
       </label>
       <button class="btn-accent rounded-lg px-4 py-2 text-sm font-medium" :disabled="store.busy">Сохранить</button>
     </form>

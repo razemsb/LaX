@@ -75,6 +75,20 @@ export const useAppStore = defineStore("app", {
         throw e;
       }
     },
+    async installDbGate() {
+      this.busy = true;
+      this.error = "";
+      this.updateProgress = "ставлю DbGate… ~350 МБ, несколько минут";
+      try {
+        this.snap = await invoke<Snapshot>("install_dbgate");
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      } finally {
+        this.busy = false;
+        this.updateProgress = "";
+      }
+    },
     async createProject(name: string, kind = "php") {
       this.busy = true;
       this.error = "";

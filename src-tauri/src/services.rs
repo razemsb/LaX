@@ -1,4 +1,6 @@
 use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
@@ -246,6 +248,86 @@ pub fn dbgate_script(paths: &Paths) -> Option<std::path::PathBuf> {
         .root
         .join("usr/apps/dbgate/node_modules/dbgate-serve/bin/dbgate-serve.js");
     p.is_file().then_some(p)
+}
+
+fn npm_cli(node_dir: &Path) -> Option<PathBuf> {
+    let parent = node_dir.parent().unwrap_or(node_dir);
+    [
+        node_dir.join("node_modules/npm/bin/npm-cli.js"),
+        node_dir.join("lib/node_modules/npm/bin/npm-cli.js"),
+        parent.join("lib/node_modules/npm/bin/npm-cli.js"),
+        parent.join("node_modules/npm/bin/npm-cli.js"),
+    ]
+    .into_iter()
+    .find(|p| p.is_file())
+}
+
+const DBGATE_PACKAGE_JSON: &str = r#"{
+  "name": "lax-dbgate",
+  "private": true,
+  "dependencies": {
+    "dbgate-serve": "7.2.5"
+  }
+}
+"#;
+
+/// `npm install` dbgate-serve into usr/apps/dbgate. Not shipped in the zip (~350 MB).
+pub fn install_dbgate(paths: &Paths) -> LaxResult<()> {
+    if dbgate_script(paths).is_some() {
+        return Ok(());
+    }
+    let Some(node_dir) = crate::discover::node_bin_dir(&paths.root) else {
+        return Err(LaxError::msg(
+            "Node не найден в bin/node. Без него DbGate не ставится.",
+        ));
+    };
+    let node = crate::platform::bin_path(&node_dir, "node");
+    if !node.exists() {
+        return Err(LaxError::msg("node не найден рядом с bin/node"));
+    }
+    let Some(npm) = npm_cli(&node_dir) else {
+        return Err(LaxError::msg("npm не найден рядом с портативным Node"));
+    };
+    let dir = paths.root.join("usr/apps/dbgate");
+    fs::create_dir_all(&dir)?;
+    let pkg = dir.join("package.json");
+    if !pkg.is_file() {
+        fs::write(&pkg, DBGATE_PACKAGE_JSON)?;
+    }
+    let cache = paths.root.join("tmp").join("npm-cache");
+    fs::create_dir_all(&cache)?;
+    let mut path = node_dir.to_string_lossy().into_owned();
+    if let Ok(rest) = std::env::var("PATH") {
+        path.push(crate::platform::path_sep());
+        path.push_str(&rest);
+    }
+    let mut cmd = Command::new(&node);
+    cmd.arg(&npm)
+        .args(["install", "--omit=dev", "--no-fund", "--no-audit"])
+        .current_dir(&dir)
+        .env("PATH", &path)
+        .env("npm_config_cache", &cache)
+        .env("npm_config_update_notifier", "false");
+    crate::platform::hide_window(&mut cmd);
+    let out = cmd
+        .output()
+        .map_err(|e| LaxError::msg(format!("не удалось запустить npm: {e}")))?;
+    if !out.status.success() {
+        let err = String::from_utf8_lossy(&out.stderr);
+        let err = err.trim();
+        let err = if err.len() > 800 { &err[err.len() - 800..] } else { err };
+        return Err(LaxError::msg(if err.is_empty() {
+            "npm install dbgate-serve не удался".into()
+        } else {
+            format!("npm install DbGate:\n{err}")
+        }));
+    }
+    if dbgate_script(paths).is_none() {
+        return Err(LaxError::msg(
+            "DbGate не появился после npm install. Проверь сеть и логи.",
+        ));
+    }
+    Ok(())
 }
 
 pub fn start_dbgate(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {

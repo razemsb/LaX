@@ -150,6 +150,21 @@ pub fn set_db_admin(state: State<AppState>, id: String) -> Result<Snapshot, Stri
 }
 
 #[tauri::command]
+pub async fn install_dbgate(state: State<'_, AppState>) -> Result<Snapshot, String> {
+    let paths = with_state(&state, |o| Ok(o.paths.clone()))?;
+    tokio::task::spawn_blocking(move || crate::services::install_dbgate(&paths))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())?;
+    with_state(&state, |o| {
+        o.set_db_admin("dbgate").map_err(|e| e.to_string())?;
+        let _ = crate::services::start_dbgate(&mut o.procs, &o.paths, &o.config);
+        o.last_message = Some("DbGate установлен. Открывается на :8030".into());
+        Ok(o.snapshot())
+    })
+}
+
+#[tauri::command]
 pub fn read_logs(state: State<AppState>, which: String) -> Result<String, String> {
     with_state(&state, |o| {
         logs::read_log(&o.paths, &o.config, &which, 250).map_err(|e| e.to_string())

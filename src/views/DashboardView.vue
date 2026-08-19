@@ -175,7 +175,15 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
           v-if="store.snap.config.dbAdmin === 'dbgate' && !store.snap.dbgateAvailable"
           class="mt-2 text-xs leading-relaxed text-muted"
         >
-          DbGate не установлен. Запусти <span class="text-text">npm run fetch-tools</span>
+          DbGate не установлен —
+          <button
+            type="button"
+            class="text-text underline decoration-line underline-offset-2"
+            :disabled="store.busy"
+            @click="store.installDbGate()"
+          >
+            скачать (~350 МБ)
+          </button>
         </p>
       </div>
       <div class="surface grid grid-cols-1 overflow-hidden p-1 sm:grid-cols-2 xl:grid-cols-1">

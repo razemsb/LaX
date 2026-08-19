@@ -41,9 +41,19 @@ pub struct LaxConfig {
     pub theme: String,
     #[serde(default = "default_db_admin", alias = "db_admin")]
     pub db_admin: String,
+    #[serde(default = "default_true", alias = "start_web")]
+    pub start_web: bool,
+    #[serde(default = "default_true", alias = "start_mailpit")]
+    pub start_mailpit: bool,
+    #[serde(default, alias = "start_dbgate")]
+    pub start_dbgate: bool,
 }
 
 fn default_mysql_enabled() -> bool {
+    true
+}
+
+fn default_true() -> bool {
     true
 }
 
@@ -133,6 +143,9 @@ impl Default for LaxConfig {
             mysql_enabled: true,
             theme: "noir".into(),
             db_admin: default_db_admin(),
+            start_web: true,
+            start_mailpit: true,
+            start_dbgate: false,
         }
     }
 }
@@ -196,6 +209,9 @@ pub fn load_config(paths: &Paths) -> LaxResult<LaxConfig> {
     match toml::from_str::<LaxConfig>(&raw) {
         Ok(mut cfg) => {
             cfg.db_admin = normalize_db_admin(&cfg.db_admin);
+            if !raw.contains("startDbgate") && !raw.contains("start_dbgate") {
+                cfg.start_dbgate = cfg.db_admin == "dbgate";
+            }
             Ok(cfg)
         }
         Err(e) => {

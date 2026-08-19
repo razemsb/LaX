@@ -148,6 +148,135 @@ Alias /phpMyAdmin "{pma}/"
     )?;
     let _ = fs::remove_file(paths.root.join("etc/apache2/alias/adminer.conf"));
     let _ = fs::remove_file(paths.root.join("etc/nginx/alias/adminer.conf"));
+    install_pma_theme(paths);
+    Ok(())
+}
+
+/// Ship `usr/themes/phpmyadmin/lax` into phpMyAdmin as a real theme (icons from pmahomme).
+pub fn install_pma_theme(paths: &Paths) {
+    if let Err(e) = install_pma_theme_inner(paths) {
+        tracing::warn!("phpMyAdmin LaX theme: {e}");
+    }
+}
+
+fn install_pma_theme_inner(paths: &Paths) -> LaxResult<()> {
+    let pma = paths.root.join("etc/apps/phpMyAdmin");
+    if !pma.join("index.php").is_file() {
+        return Ok(());
+    }
+    let src = paths.root.join("usr/themes/phpmyadmin/lax");
+    if !src.join("theme.json").is_file() {
+        return Ok(());
+    }
+    let dest = pma.join("themes/lax");
+    let homme = pma.join("themes/pmahomme");
+    fs::create_dir_all(dest.join("css"))?;
+    fs::create_dir_all(dest.join("jquery"))?;
+    fs::create_dir_all(dest.join("fonts"))?;
+    fs::create_dir_all(dest.join("img"))?;
+
+    fs::copy(src.join("theme.json"), dest.join("theme.json"))?;
+    copy_if(&src.join("img/logo.svg"), &dest.join("img/logo.svg"));
+    copy_dir_if_missing(&homme.join("img"), &dest.join("img"));
+    copy_if(&src.join("img/logo.svg"), &dest.join("img/logo.svg"));
+    copy_if(
+        &src.join("fonts/JetBrainsMono-Variable.ttf"),
+        &dest.join("fonts/JetBrainsMono-Variable.ttf"),
+    );
+    copy_if(&src.join("fonts/OFL.txt"), &dest.join("fonts/OFL.txt"));
+    copy_if(&homme.join("screen.png"), &dest.join("screen.png"));
+
+    let base_css = fs::read_to_string(homme.join("css/theme.css")).unwrap_or_default();
+    let overlay = fs::read_to_string(src.join("css/lax.css")).unwrap_or_default();
+    fs::write(
+        dest.join("css/theme.css"),
+        format!("{base_css}\n\n/* ---- LaX ---- */\n{overlay}"),
+    )?;
+    if homme.join("css/theme.rtl.css").is_file() {
+        let rtl = fs::read_to_string(homme.join("css/theme.rtl.css")).unwrap_or_default();
+        fs::write(
+            dest.join("css/theme.rtl.css"),
+            format!("{rtl}\n\n/* ---- LaX ---- */\n{overlay}"),
+        )?;
+    }
+    let mut ui = fs::read_to_string(homme.join("jquery/jquery-ui.css")).unwrap_or_default();
+    ui.push_str("\n\n/* ---- LaX ---- */\n");
+    ui.push_str(&overlay);
+    fs::write(dest.join("jquery/jquery-ui.css"), ui)?;
+
+    patch_pma_config(&pma.join("config.inc.php"))?;
+    patch_pma_css_cache_bust(&pma.join("templates/header.twig"))?;
+    Ok(())
+}
+
+fn copy_if(from: &Path, to: &Path) {
+    if from.is_file() {
+        let _ = fs::copy(from, to);
+    }
+}
+
+fn copy_dir_if_missing(from: &Path, to: &Path) {
+    if !from.is_dir() {
+        return;
+    }
+    let marker = to.join("b_home.png");
+    if marker.is_file() {
+        return;
+    }
+    let _ = copy_dir(from, to);
+}
+
+fn copy_dir(from: &Path, to: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(to)?;
+    for ent in fs::read_dir(from)? {
+        let ent = ent?;
+        let dest = to.join(ent.file_name());
+        if ent.path().is_dir() {
+            copy_dir(&ent.path(), &dest)?;
+        } else if !dest.is_file() {
+            fs::copy(ent.path(), dest)?;
+        }
+    }
+    Ok(())
+}
+
+fn patch_pma_css_cache_bust(path: &Path) -> LaxResult<()> {
+    if !path.is_file() {
+        return Ok(());
+    }
+    let mut body = fs::read_to_string(path)?;
+    body = body.replace(
+        "href=\"{{ theme_path }}/jquery/jquery-ui.css\"",
+        "href=\"{{ theme_path }}/jquery/jquery-ui.css?lax=17\"",
+    );
+    body = body.replace(
+        "css/theme{{ text_dir == 'rtl' ? '.rtl' }}.css?{{ version }}\"",
+        "css/theme{{ text_dir == 'rtl' ? '.rtl' }}.css?{{ version }}&lax=17\"",
+    );
+    body = body.replace("jquery-ui.css?lax=12", "jquery-ui.css?lax=17");
+    body = body.replace("jquery-ui.css?lax=13", "jquery-ui.css?lax=17");
+    body = body.replace("jquery-ui.css?lax=14", "jquery-ui.css?lax=17");
+    body = body.replace("&lax=12", "&lax=17");
+    body = body.replace("&lax=13", "&lax=17");
+    body = body.replace("&lax=14", "&lax=17");
+    fs::write(path, body)?;
+    Ok(())
+}
+
+fn patch_pma_config(path: &Path) -> LaxResult<()> {
+    if !path.is_file() {
+        return Ok(());
+    }
+    let mut body = fs::read_to_string(path)?;
+    const MARK: &str = "\n/* LaX theme */\n";
+    if let Some(i) = body.find(MARK) {
+        body.truncate(i);
+    }
+    body.push_str(MARK);
+    body.push_str("$cfg['ThemeDefault'] = 'lax';\n");
+    body.push_str("$cfg['NavigationDisplayLogo'] = true;\n");
+    body.push_str("$cfg['NavigationWidth'] = 268;\n");
+    fs::write(path, body)?;
     Ok(())
 }
 

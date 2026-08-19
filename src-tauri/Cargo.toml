@@ -1,6 +1,6 @@
 [package]
 name = "lax"
-version = "0.1.8"
+version = "0.1.9"
 description = "LaX — portable local development stack"
 authors = ["LaX"]
 edition = "2021"

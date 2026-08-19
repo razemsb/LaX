@@ -242,6 +242,10 @@ onUnmounted(() => {
         </template>
       </Banner>
 
+      <Banner v-if="store.updateProgress && !store.snap?.update">
+        {{ store.updateProgress }}
+      </Banner>
+
       <Banner v-if="store.error" tone="accent" @close="store.clearError()">
         {{ store.error }}
       </Banner>

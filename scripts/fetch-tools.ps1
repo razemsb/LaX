@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Download portable Mailpit + Node + DbGate so the stack does not need system installs.
+  Download portable Mailpit + Node. DbGate is optional and installed from the LaX GUI.
 #>
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot

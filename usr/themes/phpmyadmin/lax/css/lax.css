@@ -1,0 +1,801 @@
+/* LaX colors on top of pmahomme layout. Do not rewrite display/position. */
+
+:root {
+  --ink: #0c0c0e;
+  --panel: #161618;
+  --panel-2: #1c1c1f;
+  --line: #2c2c31;
+  --muted: #9a9aa1;
+  --text: #ececee;
+  --accent: #e02430;
+  --ok: #3dd68c;
+  --lift: #222226;
+  --field: #101012;
+
+  --bs-body-bg: var(--ink);
+  --bs-body-color: var(--text);
+  --bs-body-font-family: "Segoe UI", system-ui, sans-serif;
+  --bs-border-color: var(--line);
+  --bs-link-color: var(--text);
+  --bs-link-hover-color: #fff;
+  --bs-light: var(--lift);
+  --bs-white: var(--panel);
+  --bs-secondary-bg: var(--panel-2);
+  --bs-tertiary-bg: var(--lift);
+  --bs-table-bg: var(--panel);
+  --bs-table-color: var(--text);
+  --bs-table-striped-bg: var(--panel-2);
+  --bs-table-striped-color: var(--text);
+  --bs-table-hover-bg: var(--lift);
+  --bs-table-hover-color: #fff;
+  --bs-table-border-color: var(--line);
+  --bs-table-accent-bg: transparent;
+  --bs-white-rgb: 22, 22, 24;
+  --bs-light-rgb: 34, 34, 38;
+  --bs-body-bg-rgb: 12, 12, 14;
+  --bs-gradient: none;
+}
+
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--ink) !important;
+  min-width: 100%;
+}
+
+html, body {
+  background: var(--ink) !important;
+  color: var(--text) !important;
+  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+}
+
+body:not(#designer_body) {
+  min-width: 100%;
+  width: max-content;
+}
+
+a, a:link, a:visited { color: var(--text) !important; }
+a:hover { color: #fff !important; }
+
+h1, h2, h3, h4, legend {
+  color: var(--text) !important;
+  font-weight: 600 !important;
+}
+
+code, pre, .sql, .CodeMirror {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace !important;
+}
+
+/* chrome */
+#pma_navigation,
+#pma_navigation_content,
+#pma_navigation_tree,
+#pma_navigation_tree_content,
+#pma_navigation_header {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  background-image: none !important;
+}
+
+#pma_navigation a { color: var(--text) !important; }
+#pma_navigation_tree li.selected,
+#pma_navigation_tree li.activePointer {
+  background: var(--lift) !important;
+  color: var(--text) !important;
+}
+
+#pma_navigation_resizer { background: var(--line) !important; }
+#pma_navigation_collapser {
+  background: var(--panel-2) !important;
+  color: var(--muted) !important;
+  border-color: var(--line) !important;
+  filter: none !important;
+}
+
+#pma_navigation select,
+#pma_navigation input[type="text"] {
+  background: var(--field) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+  background-image: none !important;
+}
+
+#imgpmalogo {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+}
+#pmalogo a::before {
+  content: "";
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: url("../img/logo.svg") center / cover no-repeat;
+  vertical-align: middle;
+}
+
+#page_content { background: var(--ink) !important; color: var(--text) !important; }
+
+#floating_menubar,
+.navbar,
+.navbar.bg-light,
+#topmenucontainer,
+.menucontainer {
+  background: var(--panel) !important;
+  background-image: none !important;
+  border-color: var(--line) !important;
+}
+
+.navbar-nav .nav-item,
+ul#topmenu > li {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+}
+.navbar-nav .nav-link,
+ul#topmenu a {
+  color: var(--muted) !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+.navbar-nav .nav-item.active .nav-link,
+ul#topmenu > li.active a,
+.navbar-nav .nav-link:hover,
+ul#topmenu a:hover {
+  color: var(--text) !important;
+  background: var(--lift) !important;
+}
+
+.breadcrumb { background: transparent !important; }
+.breadcrumb, .breadcrumb a { color: var(--muted) !important; }
+
+/* forms */
+.form-control, .form-select,
+input[type="text"], input[type="password"], input[type="number"],
+input[type="search"], select, textarea {
+  background: var(--field) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+  background-image: none !important;
+}
+
+input[type="checkbox"],
+input[type="radio"],
+.form-check-input {
+  accent-color: var(--accent);
+}
+
+.form-check-input {
+  background-color: var(--field) !important;
+  border-color: var(--line) !important;
+  background-image: none !important;
+}
+.form-check-input:checked {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+.btn, input[type="submit"], input[type="button"],
+.btn-secondary, .btn-light, .btn-outline-secondary, .btn-outline-light {
+  background: var(--lift) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+  filter: none !important;
+}
+.btn:hover, input[type="submit"]:hover, input[type="button"]:hover {
+  background: #2a2a2e !important;
+  color: #fff !important;
+}
+.btn-primary, #buttonGo, input.btn-primary, .btn-danger {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+
+.card, .card-body, .card-header, .modal-content, .list-group-item, .dropdown-menu {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+  background-image: none !important;
+}
+.card-header {
+  background: var(--panel-2) !important;
+  color: var(--muted) !important;
+}
+
+.bg-light, .bg-white, .table-light, .thead-light, .input-group-text {
+  background: var(--panel-2) !important;
+  color: var(--text) !important;
+  background-image: none !important;
+  border-color: var(--line) !important;
+}
+
+fieldset, .pma-fieldset, legend {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+  filter: none !important;
+}
+
+.tblHeaders, .tblFooters, div.tools, caption.tblHeaders,
+fieldset.tblFooters, .pma-fieldset.tblFooters {
+  background: var(--panel-2) !important;
+  color: var(--text) !important;
+  background-image: none !important;
+}
+div.tools a, .tblFooters a { color: var(--muted) !important; }
+
+/* pmahomme paints pills white; our link color is light → invisible labels */
+.nav-pills .nav-link,
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+  background: var(--lift) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+}
+.nav-pills .nav-link:hover {
+  background: #2a2a2e !important;
+  color: #fff !important;
+}
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+.nav-tabs .nav-link {
+  background: var(--panel-2) !important;
+  color: var(--muted) !important;
+  border-color: var(--line) !important;
+}
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+}
+
+/* Bootstrap 5 stripes EVEN rows via inset box-shadow + .table's own CSS vars */
+.table,
+.table-striped,
+.table-hover,
+.table-light,
+.table-primary,
+.table-secondary,
+.table-success,
+.table-danger,
+.table-warning,
+.table-info,
+table.data,
+#table_results {
+  --bs-table-bg: var(--panel) !important;
+  --bs-table-color: var(--text) !important;
+  --bs-table-striped-bg: var(--panel-2) !important;
+  --bs-table-striped-color: var(--text) !important;
+  --bs-table-hover-bg: var(--lift) !important;
+  --bs-table-hover-color: #fff !important;
+  --bs-table-accent-bg: transparent !important;
+  --bs-table-border-color: var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--text) !important;
+}
+
+html body table td,
+html body table th,
+html body .table > :not(caption) > * > *,
+table.data td, table.data th,
+#table_results td, #table_results th {
+  background-color: var(--panel) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+  box-shadow: none !important;
+  --bs-table-accent-bg: transparent !important;
+}
+
+html body table thead th,
+html body .table thead th,
+#table_results thead th {
+  background: var(--panel-2) !important;
+  color: var(--muted) !important;
+}
+
+html body table tbody tr:nth-child(even) td,
+html body table tbody tr:nth-child(even) th,
+html body .table-striped > tbody > tr:nth-of-type(even) > *,
+html body .table-striped > tbody > tr:nth-of-type(odd) > *,
+html body table tbody:first-of-type tr:nth-child(even),
+html body table tbody:first-of-type tr:nth-child(even) td,
+html body table tbody:first-of-type tr:nth-child(even) th {
+  background-color: var(--panel-2) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+html body .table-striped > tbody > tr:nth-of-type(odd) > *,
+html body table tbody tr:nth-child(odd) td,
+html body table tbody tr:nth-child(odd) th {
+  background-color: var(--panel) !important;
+  color: var(--text) !important;
+}
+
+.alert, .success {
+  background: #121815 !important;
+  color: var(--text) !important;
+  border-color: #2a5a40 !important;
+}
+.error, .alert-danger {
+  background: #1a1012 !important;
+  color: var(--text) !important;
+  border-color: var(--accent) !important;
+}
+
+.CodeMirror, .CodeMirror-gutters {
+  background: var(--field) !important;
+  color: var(--text) !important;
+}
+
+#pma_console .toolbar { background: var(--panel-2) !important; border-color: var(--line) !important; }
+#pma_console .content { background: var(--field) !important; color: var(--text) !important; }
+#pma_console .message .text { background: transparent !important; color: var(--text) !important; }
+#pma_console .message .action_content {
+  background: var(--panel-2) !important;
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+}
+
+.pma_quick_warp .drop_list ul {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+}
+.pma_quick_warp .drop_button {
+  background: var(--lift) !important;
+  color: var(--text) !important;
+}
+
+.logo img, #imLogo {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+}
+.logo::before {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  background: url("../img/logo.svg") center / cover no-repeat;
+}
+
+.icon, img.icon { filter: invert(1) brightness(1.15); }
+#pma_navigation .icon,
+#pma_navigation img.icon,
+#pmalogo img, .logo img, #imLogo, #pmalogo a::before { filter: none !important; }
+
+.page-link {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+}
+
+.ui-widget-content { background: var(--panel) !important; color: var(--text) !important; border-color: var(--line) !important; }
+.ui-widget-header { background: var(--panel-2) !important; color: var(--text) !important; border-color: var(--line) !important; }
+.ui-state-default { background: var(--lift) !important; color: var(--text) !important; border-color: var(--line) !important; }
+.ui-widget-overlay { background: #09090b !important; }
+
+/* ---- kill every leftover light surface (text color stays) ---- */
+html body :is(
+  div, section, article, aside, header, footer, nav, main,
+  form, fieldset, legend, pre, code, blockquote, figure,
+  dialog, details, summary,
+  .card, .card-body, .card-header, .card-footer,
+  .modal-content, .modal-header, .modal-body, .modal-footer,
+  .dropdown-menu, .dropdown-item,
+  .alert, .list-group, .list-group-item,
+  .accordion, .accordion-item, .accordion-button, .accordion-body,
+  .offcanvas, .toast, .popover, .tooltip-inner,
+  .pagination, .page-link,
+  .input-group, .input-group-text, .progress,
+  .navbar, .tab-content, .tab-pane,
+  .btn, .btn-secondary, .btn-light, .btn-outline-secondary, .btn-outline-light,
+  button, select, textarea,
+  .form-control, .form-select,
+  .sqlOuter, code.sql, div.sqlvalidate, pre.sql,
+  .CodeMirror, .CodeMirror-scroll, .CodeMirror-gutters, .CodeMirror-gutter,
+  .CodeMirror-hints, .CodeMirror-lint-tooltip, .CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler,
+  .ui-widget-content, .ui-dialog, .ui-dialog-content, .ui-widget-header, .ui-dialog-buttonpane,
+  .tblHeaders, .tblFooters, fieldset.tblFooters, .pma-fieldset.tblFooters, div.tools,
+  .group-header, .group-header th, #gis_data_editor, .pdflayout_table,
+  .side-menu, #name-panel, .toggle_container .block, .history_table,
+  .pma_quick_warp .drop_list ul, .pma_quick_warp .drop_button,
+  .nav-pills .nav-link, .nav-tabs .nav-link,
+  li.nav-item, .navbar-nav .nav-item
+) {
+  background-color: var(--panel) !important;
+  background-image: none !important;
+}
+
+html, body, #page_content {
+  background-color: var(--ink) !important;
+}
+
+.form-control, .form-select,
+input[type="text"], input[type="password"], input[type="number"],
+input[type="search"], input[type="email"], input[type="url"],
+select, textarea,
+.sqlOuter, .result_query div.sqlOuter, code.sql, pre.sql, div.sqlvalidate,
+#PMA_slidingMessage code.sql,
+.CodeMirror, .CodeMirror-scroll, .CodeMirror-sizer, .CodeMirror-lines,
+.CodeMirror-gutters, .cm-s-default, .cm-s-pma {
+  background-color: var(--field) !important;
+  color: var(--text) !important;
+}
+
+.form-control::file-selector-button,
+.form-control::-webkit-file-upload-button {
+  background-color: var(--lift) !important;
+  color: var(--text) !important;
+  border: 0 !important;
+}
+
+.btn-primary, #buttonGo, input.btn-primary, .btn-danger,
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+  background-color: var(--accent) !important;
+  background-image: none !important;
+  color: #fff !important;
+}
+
+.alert, .success { background-color: #121815 !important; color: var(--text) !important; }
+.error, .alert-danger { background-color: #1a1012 !important; color: var(--text) !important; }
+
+/* SQL highlighter: pmahomme uses black tokens on a light box */
+.sqlOuter, .sqlOuter *, code.sql, code.sql *, .cm-s-pma, .cm-s-default {
+  color: var(--text);
+}
+.sqlOuter a, code.sql a { color: var(--text) !important; }
+span.cm-keyword, span.cm-statement-verb, .cm-s-default .cm-keyword { color: #c4a0e8 !important; }
+span.cm-variable, span.cm-mysql-word, .cm-s-default .cm-variable { color: var(--text) !important; }
+span.cm-comment, .cm-s-default .cm-comment { color: #6a9955 !important; }
+span.cm-mysql-string, span.cm-string, .cm-s-default .cm-string { color: #ce9178 !important; }
+span.cm-operator, span.cm-separator { color: #d4d4d8 !important; }
+span.cm-builtin, .cm-s-default .cm-builtin { color: #f07178 !important; }
+span.cm-variable-2, .cm-s-default .cm-variable-2 { color: #dcdcaa !important; }
+span.cm-variable-3, .cm-s-default .cm-variable-3 { color: #9cdcfe !important; }
+span.cm-number, .cm-s-default .cm-number { color: #b5cea8 !important; }
+.CodeMirror-cursor { border-left-color: var(--text) !important; }
+.CodeMirror-hint { color: var(--text) !important; }
+li.CodeMirror-hint-active { background: var(--accent) !important; color: #fff !important; }
+
+html body table td,
+html body table th,
+html body .table > :not(caption) > * > * {
+  background-color: var(--panel) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+html body table tbody tr:nth-child(even) td,
+html body table tbody tr:nth-child(even) th,
+html body .table-striped > tbody > tr:nth-of-type(even) > * {
+  background-color: var(--panel-2) !important;
+  color: var(--text) !important;
+}
+
+.logo::before, #pmalogo a::before {
+  background-image: url("../img/logo.svg") !important;
+}
+
+/* Designer: canvas and chrome are hardcoded white in pmahomme */
+#designer_body,
+#designer_body #page_content,
+#canvas_outer,
+#canvas,
+canvas.designer,
+#osn_tab,
+.content_fullscreen {
+  background: var(--ink) !important;
+  background-color: var(--ink) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+}
+
+.designer_tab,
+.designer_tab td,
+.designer_tab th,
+.designer_tab .header,
+.tab_zag,
+.tab_zag_2,
+.tab_field,
+.tab_field:hover,
+.tab_field_3,
+.tab_field_3:hover,
+.select_all,
+.small_tab_pref,
+.small_tab_pref:hover {
+  background: var(--panel) !important;
+  background-color: var(--panel) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+}
+.tab_field:hover,
+.tab_field_3:hover,
+.small_tab_pref:hover {
+  background: var(--lift) !important;
+  color: #fff !important;
+}
+.tab_field_3 {
+  background: #2a181a !important;
+  color: var(--text) !important;
+}
+
+.designer_header,
+#layer_menu,
+.side-menu,
+#name-panel,
+.designer_Tabs,
+.designer_Tabs:hover,
+.butt,
+.input_tab,
+.toggle_container .block,
+.history_table,
+.history_table:hover,
+.L_butt2_1:hover,
+a.M_butt:hover,
+a.M_butt_Selected_down,
+a.M_butt_Selected_down_IE,
+a.M_butt_Selected_down:hover,
+a.trigger,
+a.trigger:hover,
+a.active.trigger,
+a.active.trigger:hover {
+  background-color: var(--panel-2) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+}
+.designer_Tabs { color: var(--text) !important; }
+.small_tab { color: #fff !important; }
+.owner { color: var(--muted) !important; }
+#designer_hint {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+}
+
+/* Navigation tree: no white +/- tiles, no inverted table icons, quieter groups */
+#pma_navigation_tree {
+  color: var(--text) !important;
+  font-size: 13px !important;
+}
+#pma_navigation_tree a { color: var(--text) !important; text-decoration: none !important; }
+#pma_navigation_tree a:hover { color: #fff !important; }
+#pma_navigation_tree li { min-height: 20px; }
+#pma_navigation_tree li > a,
+#pma_navigation_tree li > i {
+  line-height: 20px !important;
+  height: auto !important;
+}
+
+#pma_navigation_tree .fst-italic {
+  font-style: normal !important;
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+}
+#pma_navigation_tree .fst-italic a {
+  color: var(--muted) !important;
+  font-weight: 600 !important;
+}
+
+#pma_navigation_tree div.block i,
+#pma_navigation_tree div.block b,
+#pma_navigation_tree .list_container,
+#pma_navigation_tree li.fast_filter {
+  border-color: var(--line) !important;
+}
+#pma_navigation_tree .list_container {
+  background: transparent !important;
+  margin-left: 0.65em;
+  padding-left: 0.55em;
+}
+
+#pma_navigation_tree div.block:not(.second) > a {
+  width: 14px !important;
+  height: 14px !important;
+  margin-left: -7px;
+  border: 1px solid #3a3a40 !important;
+  border-radius: 3px;
+  background: var(--lift) !important;
+  background-image: none !important;
+  box-sizing: border-box;
+}
+#pma_navigation_tree div.block:not(.second) > a img {
+  opacity: 0 !important;
+  width: 14px !important;
+  height: 14px !important;
+  filter: none !important;
+  background: none !important;
+}
+#pma_navigation_tree div.block:not(.second) > a::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 1.5px;
+  background: #c8c8ce;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+#pma_navigation_tree div.block:not(.second) > a:has(.ic_b_plus)::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.5px;
+  height: 7px;
+  background: #c8c8ce;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+#pma_navigation_tree .block.second img,
+#pma_navigation_tree .block.second .icon {
+  opacity: 0.8;
+  filter: none !important;
+}
+#pma_navigation_tree .ic_b_newtbl,
+#pma_navigation_tree .ic_b_snewtbl,
+#pma_navigation_tree .ic_b_newdb,
+#pma_navigation_tree .ic_b_event_add,
+#pma_navigation_tree .ic_b_routine_add,
+#pma_navigation_tree .ic_b_trigger_add,
+#pma_navigation_tree .ic_b_view_add,
+#pma_navigation_tree .ic_b_index_add,
+#pma_navigation_tree .ic_b_column_add {
+  opacity: 0.45;
+  filter: grayscale(0.35) brightness(1.1) !important;
+}
+
+/* Data tables: header must beat Bootstrap `.table > :not(caption) > * > *` */
+html body .table > thead:not(caption) > * > *,
+html body table > thead > tr > th,
+html body #table_results > thead > tr > th,
+html body table.data > thead > tr > th {
+  background: #101012 !important;
+  background-color: #101012 !important;
+  color: #9a9aa1 !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #2c2c31 !important;
+  border-top: 0 !important;
+  padding: 10px 12px !important;
+  white-space: nowrap;
+  vertical-align: middle !important;
+}
+
+html body .table > tbody:not(caption) > * > *,
+html body table > tbody > tr > td,
+html body table > tbody > tr > th,
+html body #table_results > tbody > tr > td {
+  padding: 9px 12px !important;
+  border-bottom: 1px solid #232328 !important;
+  vertical-align: middle !important;
+  line-height: 1.45 !important;
+  color: var(--text) !important;
+}
+
+html body .table > tbody:not(caption) > tr:nth-child(odd) > *,
+html body table > tbody > tr:nth-child(odd) > td,
+html body table > tbody > tr:nth-child(odd) > th {
+  background: #161618 !important;
+  background-color: #161618 !important;
+}
+html body .table > tbody:not(caption) > tr:nth-child(even) > *,
+html body table > tbody > tr:nth-child(even) > td,
+html body table > tbody > tr:nth-child(even) > th {
+  background: #1a1a1e !important;
+  background-color: #1a1a1e !important;
+}
+html body .table > tbody:not(caption) > tr:hover > *,
+html body table > tbody > tr:hover > td,
+html body table > tbody > tr:hover > th {
+  background: #222226 !important;
+  background-color: #222226 !important;
+}
+
+html body table .null {
+  color: #6e6e76 !important;
+  font-style: italic;
+}
+
+html body .table,
+html body table.data,
+html body #table_results {
+  border: 1px solid #2c2c31 !important;
+}
+
+.table-responsive,
+div.responsivetable {
+  overflow-x: auto;
+}
+
+html body #page_content {
+  overflow-x: visible !important;
+  background: var(--ink) !important;
+  min-width: 100%;
+  width: max-content;
+  box-sizing: border-box;
+}
+
+html body .btn,
+html body button.btn,
+html body .dropdown-toggle {
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+}
+html body .btn-sm,
+html body .btn.btn-sm {
+  padding: 4px 10px !important;
+}
+
+#table_results td a,
+table.data td a {
+  text-decoration: none !important;
+  margin-right: 0.55em;
+}
+#table_results td a:last-child,
+table.data td a:last-child {
+  margin-right: 0;
+}
+
+/* Browse pager: pmahomme paints this table light-gray; empty <td>s become white bricks */
+html body table.navigation {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  width: auto !important;
+  margin: 0.6em 0 !important;
+}
+html body table.navigation td,
+html body table.navigation th,
+html body table.navigation > tbody > tr > td,
+html body table.navigation > tbody > tr > th {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 4px 8px !important;
+}
+html body table.navigation td.navigation_separator:empty {
+  display: none !important;
+}
+html body .navigation_separator {
+  color: var(--line) !important;
+  background: transparent !important;
+  text-shadow: none !important;
+  width: auto !important;
+  height: auto !important;
+  font-size: 12px !important;
+}
+
+/* PMA prints the same pager above and below the result set */
+html body table.navigation ~ table.navigation {
+  display: none !important;
+}

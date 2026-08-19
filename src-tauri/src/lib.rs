@@ -159,6 +159,7 @@ pub fn run() {
             commands::save_config,
             commands::set_theme,
             commands::set_db_admin,
+            commands::install_dbgate,
             commands::read_logs,
             commands::list_php_extensions,
             commands::set_php_extension,

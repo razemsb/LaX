@@ -24,9 +24,47 @@ cp -a "$BIN" "$DEST/lax"
 chmod +x "$DEST/lax"
 cp -a "$ROOT/bin" "$DEST/bin"
 cp -a "$ROOT/usr/." "$DEST/usr/"
+rm -rf "$DEST/usr/apps/dbgate/node_modules"
 if [[ -d "$ROOT/etc" ]]; then
   mkdir -p "$DEST/etc"
   cp -a "$ROOT/etc/." "$DEST/etc/"
+fi
+# phpMyAdmin LaX theme (icons from pmahomme)
+PMA="$DEST/etc/apps/phpMyAdmin"
+THEME_SRC="$ROOT/usr/themes/phpmyadmin/lax"
+if [[ -f "$PMA/index.php" && -f "$THEME_SRC/theme.json" ]]; then
+  HOMME="$PMA/themes/pmahomme"
+  TDEST="$PMA/themes/lax"
+  mkdir -p "$TDEST/css" "$TDEST/jquery" "$TDEST/fonts" "$TDEST/img"
+  cp -a "$THEME_SRC/theme.json" "$TDEST/theme.json"
+  if [[ -d "$HOMME/img" ]]; then cp -a "$HOMME/img/." "$TDEST/img/"; fi
+  [[ -f "$THEME_SRC/img/logo.svg" ]] && cp -a "$THEME_SRC/img/logo.svg" "$TDEST/img/logo.svg"
+  [[ -d "$THEME_SRC/fonts" ]] && cp -a "$THEME_SRC/fonts/." "$TDEST/fonts/"
+  [[ -f "$HOMME/screen.png" ]] && cp -a "$HOMME/screen.png" "$TDEST/screen.png"
+  OVER="$(cat "$THEME_SRC/css/lax.css")"
+  if [[ -f "$HOMME/css/theme.css" ]]; then
+    { cat "$HOMME/css/theme.css"; printf '\n\n/* ---- LaX ---- */\n%s\n' "$OVER"; } > "$TDEST/css/theme.css"
+  fi
+  if [[ -f "$HOMME/css/theme.rtl.css" ]]; then
+    { cat "$HOMME/css/theme.rtl.css"; printf '\n\n/* ---- LaX ---- */\n%s\n' "$OVER"; } > "$TDEST/css/theme.rtl.css"
+  fi
+  if [[ -f "$HOMME/jquery/jquery-ui.css" ]]; then
+    { cat "$HOMME/jquery/jquery-ui.css"; printf '\n\n/* ---- LaX ---- */\n%s\n' "$OVER"; } > "$TDEST/jquery/jquery-ui.css"
+  fi
+  CFG="$PMA/config.inc.php"
+  if [[ -f "$CFG" ]]; then
+    python3 - <<PY
+from pathlib import Path
+p = Path(r"$CFG")
+t = p.read_text(encoding="utf-8", errors="replace")
+mark = "\n/* LaX theme */\n"
+i = t.find(mark)
+if i >= 0:
+    t = t[:i]
+t += mark + "\$cfg['ThemeDefault'] = 'lax';\n\$cfg['NavigationDisplayLogo'] = true;\n\$cfg['NavigationWidth'] = 268;\n"
+p.write_text(t, encoding="utf-8")
+PY
+  fi
 fi
 if [[ -f "$ROOT/logo.svg" ]]; then
   cp "$ROOT/logo.svg" "$DEST/logo.svg"

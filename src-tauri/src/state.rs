@@ -103,6 +103,7 @@ impl Orchestrator {
         reconcile_versions(&paths, &mut config);
         config::ensure_runtime_dirs(&paths, &config)?;
         let _ = crate::portable::rebase(&paths, &config);
+        crate::vhosts::install_pma_theme(&paths);
         Ok(Self {
             paths,
             config,
@@ -265,9 +266,15 @@ impl Orchestrator {
         if self.config.mysql_enabled && !port_open(self.config.mysql_port) {
             services::start_mariadb(&mut self.procs, &self.paths, &self.config)?;
         }
-        self.start_web()?;
-        let _ = services::start_mailpit(&mut self.procs, &self.paths);
-        let _ = services::start_dbgate(&mut self.procs, &self.paths, &self.config);
+        if self.config.start_web {
+            self.start_web()?;
+        }
+        if self.config.start_mailpit {
+            let _ = services::start_mailpit(&mut self.procs, &self.paths);
+        }
+        if self.config.start_dbgate {
+            let _ = services::start_dbgate(&mut self.procs, &self.paths, &self.config);
+        }
         self.port_conflict = None;
         Ok(())
     }
@@ -356,11 +363,9 @@ impl Orchestrator {
             }
             "dbgate" => {
                 if services::dbgate_script(&self.paths).is_none() {
-                    return Err(LaxError::msg(if cfg!(unix) {
-                        "DbGate не найден. Запусти bash scripts/fetch-linux-stack.sh — пакет появится в usr/apps/dbgate"
-                    } else {
-                        "DbGate не найден. Запусти npm run fetch-tools — пакет появится в usr/apps/dbgate"
-                    }));
+                    return Err(LaxError::msg(
+                        "DbGate не установлен. Настройки → панель баз → Скачать DbGate",
+                    ));
                 }
                 services::start_dbgate(&mut self.procs, &self.paths, &self.config)?;
             }
@@ -464,6 +469,7 @@ impl Orchestrator {
 
     pub fn set_db_admin(&mut self, id: &str) -> LaxResult<()> {
         self.config.db_admin = config::normalize_db_admin(id);
+        self.config.start_dbgate = self.config.db_admin == "dbgate";
         config::save_config(&self.paths, &self.config)?;
         Ok(())
     }

@@ -150,9 +150,9 @@ MAIL_ENCRYPTION=null
 MariaDB из Обзора: создать базу · импорт `.sql` · открыть выбранную в GUI.  
 Дампа из GUI пока нет.
 
-В **Настройках** выбирается админка: **phpMyAdmin** или **DbGate**.
+В **Настройках** выбирается админка: **phpMyAdmin** (в zip) или **DbGate** (ставится кнопкой, ~350 МБ).
 
-phpMyAdmin → [http://localhost/phpmyadmin/](http://localhost/phpmyadmin/)  
+phpMyAdmin → [http://localhost/phpmyadmin/](http://localhost/phpmyadmin/) · тема **LaX** (тёмная, логотип, адаптив)  
 DbGate → [http://localhost:8030/](http://localhost:8030/)
 
 ---
@@ -222,7 +222,7 @@ LaX/
 git clone https://github.com/razemsb/LaX.git
 cd LaX
 npm install
-npm run fetch-tools     # Mailpit + Node + DbGate
+npm run fetch-tools     # Mailpit + Node → bin/
 npm run lax             # окно + hot reload
 npm run build:exe       # lax.exe в корне
 npm run pack            # портативное дерево → pack/
@@ -237,7 +237,7 @@ npm run pack            # портативное дерево → pack/
 | `npm run build` | типы + `dist/` |
 | `npm run build:exe` | релизный exe |
 | `npm run pack` | полный каталог |
-| `npm run fetch-tools` | Mailpit, Node и DbGate |
+| `npm run fetch-tools` | Mailpit и Node (DbGate — кнопка в GUI) |
 
 Linux AppImage: тег `v*` или Actions → **Linux**. Рядом со стеком:
 
