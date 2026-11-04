@@ -40,12 +40,36 @@ Invoke-Robo "$Root\etc" "$Dest\etc" @("tmp")
 Invoke-Robo "$Root\usr" "$Dest\usr" @("node_modules")
 Invoke-Robo "$Root\data" "$Dest\data"
 
-# Release www is only the FileManager, unpacked at document root (www/index.html, www/data, ...).
+# Release www is EFM — always the latest release of github.com/razemsb/FileManager.
 $wwwDest = Join-Path $Dest "www"
 New-Item -ItemType Directory -Force -Path $wwwDest | Out-Null
-$fmZip = Join-Path $Root "realese (1).zip"
-if (-not (Test-Path $fmZip)) {
-    throw "FileManager zip not found: $fmZip"
+$fmCache = Join-Path $Root "tmp\fm-cache"
+New-Item -ItemType Directory -Force -Path $fmCache | Out-Null
+$fmZip = $null
+try {
+    $rel = Invoke-RestMethod "https://api.github.com/repos/razemsb/FileManager/releases/latest" -Headers @{ "User-Agent" = "LaX-pack" }
+    $tag = $rel.tag_name
+    $asset = @($rel.assets | Where-Object { $_.name -like "*.zip" } | Select-Object -First 1)[0]
+    if ($asset) {
+        $fmZip = Join-Path $fmCache "$tag.zip"
+        if (-not (Test-Path $fmZip)) {
+            Write-Host "==> FileManager $tag ($($asset.name))"
+            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $fmZip -UseBasicParsing
+        } else {
+            Write-Host "FileManager $tag (cached)"
+        }
+    }
+} catch {
+    Write-Host "FileManager release fetch failed: $($_.Exception.Message)"
+}
+$localZip = Join-Path $Root "realese (1).zip"
+if (-not $fmZip -or -not (Test-Path $fmZip)) {
+    if (Test-Path $localZip) {
+        Write-Host "falling back to local $localZip"
+        $fmZip = $localZip
+    } else {
+        throw "FileManager zip unavailable: no GitHub release and no local realese (1).zip"
+    }
 }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [System.IO.Compression.ZipFile]::ExtractToDirectory($fmZip, $wwwDest)
