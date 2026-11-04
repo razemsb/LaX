@@ -24,6 +24,7 @@ pub struct UpdateInfo {
     pub notes: String,
     pub download_url: Option<String>,
     pub download_name: Option<String>,
+    pub checksum_url: Option<String>,
     pub size: Option<u64>,
 }
 
@@ -72,6 +73,13 @@ pub fn fetch_latest() -> LaxResult<UpdateInfo> {
 
     let version = rel.tag_name.trim().trim_start_matches('v').to_string();
     let asset = pick_asset(&rel.assets);
+    let checksum_url = asset.and_then(|a| {
+        let want = format!("{}.sha256", a.name);
+        rel.assets
+            .iter()
+            .find(|x| x.name == want)
+            .map(|x| x.browser_download_url.clone())
+    });
     let notes = rel
         .body
         .unwrap_or_default()
@@ -89,8 +97,54 @@ pub fn fetch_latest() -> LaxResult<UpdateInfo> {
         notes,
         download_url: asset.map(|a| a.browser_download_url.clone()),
         download_name: asset.map(|a| a.name.clone()),
+        checksum_url,
         size: asset.map(|a| a.size),
     })
+}
+
+/// Fetch the expected SHA256 (first whitespace-separated token of the file).
+pub fn fetch_checksum(url: &str) -> LaxResult<String> {
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(Duration::from_secs(15))
+        .timeout(Duration::from_secs(30))
+        .user_agent(&format!("LaX/{APP_VERSION} (+{REPO_URL})"))
+        .build();
+    let text = agent
+        .get(url)
+        .call()
+        .map_err(|e| LaxError::msg(format!("checksum: {e}")))?
+        .into_string()
+        .map_err(|e| LaxError::msg(format!("checksum: {e}")))?;
+    Ok(text
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase())
+}
+
+pub fn verify_sha256(path: &Path, expected_hex: &str) -> LaxResult<()> {
+    use sha2::Digest;
+    let mut file = fs::File::open(path)?;
+    let mut hasher = sha2::Sha256::new();
+    let mut buf = [0u8; 64 * 1024];
+    loop {
+        let n = io::Read::read(&mut file, &mut buf)?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    let got = hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
+    if got != expected_hex.trim().to_ascii_lowercase() {
+        return Err(LaxError::msg(
+            rust_i18n::t!("update.checksum_mismatch").into_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn pick_asset(assets: &[GhAsset]) -> Option<&GhAsset> {
@@ -203,15 +257,20 @@ fn download(url: &str, dest: &Path, progress: &mut impl FnMut(&str)) -> LaxResul
 
 fn install_zip(root: &Path, zip_path: &Path, progress: &mut impl FnMut(&str)) -> LaxResult<()> {
     progress(&rust_i18n::t!("update.unpacking"));
+    let staging = root.join("tmp").join("update-tree");
+    if staging.exists() {
+        let _ = fs::remove_dir_all(&staging);
+    }
+    fs::create_dir_all(&staging)?;
+
     let file = fs::File::open(zip_path)?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| LaxError::msg(e.to_string()))?;
     let prefix = zip_prefix(&mut archive);
     let total = archive.len().max(1);
-    let mut written = 0u32;
-    let mut skipped = 0u32;
+    let mut extracted = 0u32;
     for i in 0..archive.len() {
         if i % 80 == 0 {
-            progress(&rust_i18n::t!("update.installing_pct", pct = i * 100 / total));
+            progress(&rust_i18n::t!("update.unpacking_pct", pct = i * 100 / total));
         }
         let mut entry = archive
             .by_index(i)
@@ -222,35 +281,69 @@ fn install_zip(root: &Path, zip_path: &Path, progress: &mut impl FnMut(&str)) ->
         let Some(rel) = zip_rel(entry.name(), prefix.as_deref()) else {
             continue;
         };
-        if skip_rel(&rel) {
-            continue;
-        }
-        let dest = if is_self_exe(&rel) {
-            root.join(if cfg!(windows) {
-                "lax.exe.new"
-            } else {
-                "lax.new"
-            })
-        } else {
-            root.join(&rel)
-        };
-        if !is_self_exe(&rel) && dest.is_file() {
-            if let Ok(meta) = dest.metadata() {
-                if meta.len() == entry.size() {
-                    skipped += 1;
-                    continue;
-                }
-            }
-        }
-        if let Some(parent) = dest.parent() {
+        let out = staging.join(&rel);
+        if let Some(parent) = out.parent() {
             fs::create_dir_all(parent)?;
         }
-        let mut out = fs::File::create(&dest)?;
-        io::copy(&mut entry, &mut out)?;
-        written += 1;
+        let mut target = fs::File::create(&out)?;
+        io::copy(&mut entry, &mut target)?;
+        extracted += 1;
     }
+    if extracted == 0 {
+        let _ = fs::remove_dir_all(&staging);
+        return Err(LaxError::msg(rust_i18n::t!("update.empty_archive")));
+    }
+
+    progress(&rust_i18n::t!("update.installing"));
+    let (written, skipped) = apply_staging(root, &staging)?;
+    let _ = fs::remove_dir_all(&staging);
     progress(&rust_i18n::t!("update.done_files", written = written, skipped = skipped));
     Ok(())
+}
+
+fn apply_staging(root: &Path, staging: &Path) -> LaxResult<(u32, u32)> {
+    let mut written = 0u32;
+    let mut skipped = 0u32;
+    let mut stack = vec![staging.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(rd) = fs::read_dir(&dir) else {
+            continue;
+        };
+        for ent in rd.flatten() {
+            let path = ent.path();
+            if path.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            let Ok(rel) = path.strip_prefix(staging) else {
+                continue;
+            };
+            let rel = rel.to_path_buf();
+            if skip_rel(&rel) {
+                skipped += 1;
+                continue;
+            }
+            let dest = if is_self_exe(&rel) {
+                root.join(if cfg!(windows) { "lax.exe.new" } else { "lax.new" })
+            } else {
+                root.join(&rel)
+            };
+            if !is_self_exe(&rel) && dest.is_file() {
+                if let (Ok(m), Ok(s)) = (dest.metadata(), ent.metadata()) {
+                    if m.len() == s.len() {
+                        skipped += 1;
+                        continue;
+                    }
+                }
+            }
+            if let Some(parent) = dest.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(&path, &dest)?;
+            written += 1;
+        }
+    }
+    Ok((written, skipped))
 }
 
 fn zip_prefix(archive: &mut zip::ZipArchive<fs::File>) -> Option<String> {

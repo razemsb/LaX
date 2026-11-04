@@ -81,6 +81,8 @@ pub struct PortConflict {
 pub struct TunnelInfo {
     pub path: String,
     pub url: Option<String>,
+    #[serde(default)]
+    pub port: Option<u16>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -313,18 +315,14 @@ impl Orchestrator {
     }
 
     pub fn tunnel_ready(&mut self, key: &str, url: String) {
-        let suffix = {
-            let dir = self.paths.www(&self.config).join(key);
-            let has_public = crate::projects::document_root_for(&dir) != dir;
-            format!("/{key}{}", if has_public { "/public/" } else { "/" })
-        };
         if let Some(t) = self.tunnels.get_mut(key) {
-            t.url = Some(format!("{url}{suffix}"));
+            // the share vhost serves the project at the public root
+            t.url = Some(url);
             self.last_message = None;
         }
     }
 
-    fn start_web(&mut self) -> LaxResult<()> {
+    pub(crate) fn start_web(&mut self) -> LaxResult<()> {
         let port = self.web_port();
         #[cfg(unix)]
         {

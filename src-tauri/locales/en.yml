@@ -91,6 +91,8 @@ share:
   missing: cloudflared not found in bin/cloudflared — download the binary (npm run fetch-tools)
   already: this project is already shared
   not_found: project not found in www
+  web_off: start the web server first — the tunnel has nothing to serve
+  no_port: no free port for sharing (12000–12999 are all taken)
 
 update:
   no_os_asset: no file for this OS in the release — open the release page
@@ -107,3 +109,6 @@ update:
   installing: installing files…
   done_files: "done · %{written} new files, %{skipped} unchanged"
   not_appimage: this is not an AppImage — download the file manually from the release page
+  checksum: verifying checksum…
+  checksum_mismatch: checksum mismatch — update cancelled
+  empty_archive: update archive is empty — installation cancelled

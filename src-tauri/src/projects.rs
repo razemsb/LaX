@@ -28,6 +28,14 @@ pub struct ProjectInfo {
     pub php_version: Option<String>,
 }
 
+pub fn is_clean_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
 pub fn site_php_path(paths: &Paths) -> PathBuf {
     paths.root.join("usr").join("site_php.toml")
 }

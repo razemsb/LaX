@@ -14,13 +14,20 @@ function Get-Zip($Url, $OutFile) {
 }
 
 # --- Mailpit ---
+# Pinned version + SHA256: exactly what the release ships.
+$MailpitVersion = "v1.33.0"
+$MailpitSha256 = "47122dd828ff80dcaef62b2952c478b178afadadf066c990489608e537121bfd"
 $mailDir = Join-Path $Root "bin\mailpit"
 $mailExe = Join-Path $mailDir "mailpit.exe"
 if (-not (Test-Path $mailExe)) {
-    Write-Host "==> Mailpit"
+    Write-Host "==> Mailpit $MailpitVersion"
     New-Item -ItemType Directory -Force -Path $mailDir | Out-Null
     $zip = Join-Path $Tmp "mailpit.zip"
-    Get-Zip "https://github.com/axllent/mailpit/releases/latest/download/mailpit-windows-amd64.zip" $zip
+    Get-Zip "https://github.com/axllent/mailpit/releases/download/$MailpitVersion/mailpit-windows-amd64.zip" $zip
+    if ($MailpitSha256 -ne "CHANGE_ME_MAILPIT_SHA256") {
+        $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
+        if ($got -ne $MailpitSha256.ToLower()) { throw "mailpit sha256 mismatch: $got" }
+    }
     Expand-Archive -LiteralPath $zip -DestinationPath $mailDir -Force
     if (-not (Test-Path $mailExe)) {
         $found = Get-ChildItem -Path $mailDir -Recurse -Filter "mailpit.exe" | Select-Object -First 1
@@ -37,6 +44,9 @@ if (-not (Test-Path $mailExe)) {
 }
 
 # --- Node ---
+# Pinned version + SHA256: exactly what the release ships.
+$NodeVersion = "v22.23.4"
+$NodeSha256 = "cbc74b5e0982c9dbb41525fd8fb5dcd32fbee237863f7829072f4639a1ce5f20"
 $nodeDir = Join-Path $Root "bin\node"
 $nodeExe = Join-Path $nodeDir "node.exe"
 if (-not (Test-Path $nodeExe)) {
@@ -50,16 +60,13 @@ if (-not (Test-Path $nodeExe)) {
         New-Item -ItemType Directory -Force -Path $nodeDir | Out-Null
         Copy-Item (Join-Path (Split-Path $laragonNode) "*") $nodeDir -Recurse -Force
     } else {
-        Write-Host "==> Node LTS (win-x64)"
-        $idx = Invoke-RestMethod "https://nodejs.org/dist/index.json"
-        $rel = $idx | Where-Object { $_.lts -and $_.version -like "v22.*" } | Select-Object -First 1
-        if (-not $rel) {
-            $rel = $idx | Where-Object { $_.lts } | Select-Object -First 1
-        }
-        $ver = $rel.version
+        Write-Host "==> Node $NodeVersion (win-x64)"
+        $ver = $NodeVersion
         $name = "node-$ver-win-x64"
         $zip = Join-Path $Tmp "node.zip"
         Get-Zip "https://nodejs.org/dist/$ver/$name.zip" $zip
+        $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
+        if ($got -ne $NodeSha256) { throw "node sha256 mismatch: $got" }
         $extract = Join-Path $Tmp "node"
         if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
         Expand-Archive -LiteralPath $zip -DestinationPath $extract -Force
@@ -81,12 +88,15 @@ if (-not (Test-Path $nodeExe)) {
 # --- cloudflared (quick tunnels, public share) ---
 # Pinned version: exactly the binary the release was tested with.
 $CfVersion = "2026.10.7"
+$CfSha256 = "2493dbc168923bb3e59e5e7716f71deced92992eea9acd6e9d74f84ac7751343"
 $cfDir = Join-Path $Root "bin\cloudflared"
 $cfExe = Join-Path $cfDir "cloudflared.exe"
 if (-not (Test-Path $cfExe)) {
     Write-Host "==> cloudflared $CfVersion (win-amd64)"
     New-Item -ItemType Directory -Force -Path $cfDir | Out-Null
     Get-Zip "https://github.com/cloudflare/cloudflared/releases/download/$CfVersion/cloudflared-windows-amd64.exe" $cfExe
+    $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $cfExe).Hash.ToLower()
+    if ($got -ne $CfSha256) { throw "cloudflared sha256 mismatch: $got" }
     Write-Host "ok $cfExe"
 } else {
     Write-Host "skip cloudflared (already in bin/cloudflared)"

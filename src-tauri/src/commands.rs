@@ -329,21 +329,24 @@ pub fn share_project(state: State<AppState>, path: String) -> Result<Snapshot, S
         if !crate::tunnel::available(&o.paths) {
             return Err(rust_i18n::t!("share.missing").to_string());
         }
-        let local = {
-            let port = if o.config.web_server == "nginx" {
-                o.config.nginx_port
-            } else {
-                o.config.apache_port
-            };
-            // quick tunnels ignore the path in --url: always tunnel to the
-            // web root and append the project path to the PUBLIC url instead
-            format!("http://localhost{}", if port == 80 { String::new() } else { format!(":{port}") })
+        let web_port = if o.config.web_server == "nginx" {
+            o.config.nginx_port
+        } else {
+            o.config.apache_port
         };
+        if !discover::port_open(web_port) {
+            return Err(rust_i18n::t!("share.web_off").to_string());
+        }
+        let port = pick_share_port(&o.config)?;
+        crate::vhosts::write_share_vhost(&o.paths, &o.config, &p, port).map_err(|e| e.to_string())?;
+        o.start_web().map_err(|e| e.to_string())?;
+        let local = format!("http://127.0.0.1:{port}");
         o.tunnels.insert(
             p.name.clone(),
             TunnelInfo {
                 path: p.path.clone(),
                 url: None,
+                port: Some(port),
             },
         );
         crate::tunnel::start(&o.paths, &mut o.procs, inner, p.name.clone(), local)
@@ -365,9 +368,30 @@ pub fn unshare_project(state: State<AppState>, path: String) -> Result<Snapshot,
         if let Some(name) = name {
             crate::tunnel::stop(&mut o.procs, &name);
             o.tunnels.remove(&name);
+            crate::vhosts::clear_share_vhost(&o.paths, &name);
+            let web_port = if o.config.web_server == "nginx" {
+                o.config.nginx_port
+            } else {
+                o.config.apache_port
+            };
+            if discover::port_open(web_port) {
+                let _ = o.start_web();
+            }
         }
         Ok(o.snapshot())
     })
+}
+
+fn pick_share_port(cfg: &crate::config::LaxConfig) -> Result<u16, String> {
+    for port in 12000..=12999u16 {
+        if cfg.php_cgi_ports.contains(&port) {
+            continue;
+        }
+        if !discover::port_open(port) {
+            return Ok(port);
+        }
+    }
+    Err(rust_i18n::t!("share.no_port").to_string())
 }
 
 #[tauri::command]
@@ -452,6 +476,12 @@ pub async fn apply_update(app: AppHandle, state: State<'_, AppState>) -> Result<
     .await
     .map_err(|e| e.to_string())?
     .map_err(|e| e.to_string())?;
+
+    if let Some(sum_url) = info.checksum_url.clone() {
+        crate::update::emit_progress(&app, &rust_i18n::t!("update.checksum"));
+        let expected = crate::update::fetch_checksum(&sum_url).map_err(|e| e.to_string())?;
+        crate::update::verify_sha256(&dest, &expected).map_err(|e| e.to_string())?;
+    }
 
     crate::update::emit_progress(&app, &rust_i18n::t!("update.stopping"));
     with_state(&state, |o| {

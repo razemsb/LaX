@@ -98,6 +98,11 @@ function tunnelFor(p: ProjectInfo) {
   return store.snap?.tunnels.find((x) => x.path === p.path) ?? null;
 }
 
+function onShare(path: string) {
+  if (!window.confirm(t("share.warning"))) return;
+  store.shareProject(path);
+}
+
 function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
   showContextMenu(e, projectContextItems(p, {
     openUrl: (url) => store.openUrl(url),
@@ -105,7 +110,7 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
     openTerminal: (path) => store.openTerminal(path),
     openVscode: (path) => store.openVscode(path),
     run: (path, action) => store.runProjectAction(path, action),
-    share: (path) => store.shareProject(path),
+    share: onShare,
     unshare: (path) => store.unshareProject(path),
   }, tunnelFor(p)));
 }

@@ -14,6 +14,9 @@ pub fn regenerate(paths: &Paths, cfg: &LaxConfig, projects: &[ProjectInfo]) -> L
     fs::create_dir_all(&nginx_dir)?;
     clear_auto(&apache_dir)?;
     clear_auto(&nginx_dir)?;
+    // stale share vhosts from a previous run (tunnels never survive a restart)
+    clear_share_confs(&apache_dir)?;
+    clear_share_confs(&nginx_dir)?;
     write_nginx_support(paths)?;
     write_defaults(paths, cfg)?;
     write_db_apps(paths, cfg)?;
@@ -24,15 +27,115 @@ pub fn regenerate(paths: &Paths, cfg: &LaxConfig, projects: &[ProjectInfo]) -> L
     Ok(())
 }
 
+fn clear_share_confs(dir: &Path) -> LaxResult<()> {
+    if let Ok(rd) = fs::read_dir(dir) {
+        for ent in rd.flatten() {
+            let name = ent.file_name().to_string_lossy().into_owned();
+            if name.starts_with("share.") && name.ends_with(".conf") {
+                let _ = fs::remove_file(ent.path());
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Dedicated loopback-only vhost for a public share tunnel: serves exactly
+/// one project on 127.0.0.1:<port>, so the tunnel cannot reach phpMyAdmin,
+/// the FileManager or other projects on the main web port.
+pub fn write_share_vhost(paths: &Paths, cfg: &LaxConfig, p: &ProjectInfo, port: u16) -> LaxResult<()> {
+    let docroot = unix(&crate::projects::document_root_for(Path::new(&p.path)));
+    let root = unix(&paths.root);
+    let name = p.name.chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '-' })
+        .collect::<String>();
+
+    if cfg.web_server == "apache" {
+        let apache = format!(
+            r#"Listen 127.0.0.1:{port}
+<VirtualHost 127.0.0.1:{port}>
+    DocumentRoot "{docroot}"
+    <Directory "{docroot}">
+        Options Indexes FollowSymLinks Includes ExecCGI
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+"#
+        );
+        write_file(
+            &paths.root.join(format!("etc/apache2/sites-enabled/share.apache.{name}.conf")),
+            &apache,
+        )?;
+    } else {
+        let fastcgi_pass = match p.php_version.as_deref().filter(|v| *v != cfg.php_version) {
+            Some(ver) => crate::php::site_php_ports(paths, cfg)
+                .into_iter()
+                .find(|(v, _)| v == ver)
+                .map(|(_, p)| format!("127.0.0.1:{p}"))
+                .unwrap_or_else(|| "php_upstream".into()),
+            None => "php_upstream".into(),
+        };
+        let nginx = format!(
+            r#"server {{
+    listen 127.0.0.1:{port};
+    server_name _;
+    root "{docroot}";
+    index index.html index.htm index.php;
+    client_max_body_size 2000M;
+
+    location / {{
+        try_files $uri $uri/ /index.php$is_args$args;
+        autoindex on;
+    }}
+
+    location ~ \.php$ {{
+        include "{root}/etc/nginx/fastcgi_params";
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_index index.php;
+        fastcgi_pass {fastcgi_pass};
+    }}
+
+    location = /favicon.ico {{ access_log off; log_not_found off; }}
+    location ~ /\.ht {{ deny all; }}
+}}
+"#
+        );
+        write_file(
+            &paths.root.join(format!("etc/nginx/sites-enabled/share.nginx.{name}.conf")),
+            &nginx,
+        )?;
+    }
+    Ok(())
+}
+
+pub fn clear_share_vhost(paths: &Paths, name: &str) {
+    let clean: String = name.chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '-' })
+        .collect();
+    for dir in ["etc/apache2/sites-enabled", "etc/nginx/sites-enabled"] {
+        let _ = fs::remove_file(paths.root.join(dir).join(format!("share.apache.{clean}.conf")));
+        let _ = fs::remove_file(paths.root.join(dir).join(format!("share.nginx.{clean}.conf")));
+    }
+}
+
 fn write_project_vhosts(paths: &Paths, cfg: &LaxConfig, projects: &[ProjectInfo]) -> LaxResult<()> {
     let tld = cfg.tld.trim_start_matches('.');
     let ports = crate::php::site_php_ports(paths, cfg);
     for p in projects {
+        if !crate::projects::is_clean_name(&p.name) {
+            tracing::warn!("vhost: skip project with unsafe name {:?}", p.name);
+            continue;
+        }
         let name = p.name.chars()
             .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '-' })
             .collect::<String>();
+        let docroot_raw = crate::projects::document_root_for(Path::new(&p.path));
+        let docroot = unix(&docroot_raw);
+        if docroot.contains('"') || docroot.contains('\n') || docroot.contains('\r') {
+            tracing::warn!("vhost: skip project with unsafe path {:?}", p.path);
+            continue;
+        }
         let domain = format!("{name}.{tld}");
-        let docroot = unix(&crate::projects::document_root_for(Path::new(&p.path)));
         let root = unix(&paths.root);
         let override_php = p.php_version.clone().filter(|v| v != &cfg.php_version);
         let apache_php = override_php.as_ref().and_then(|v| {
@@ -80,7 +183,7 @@ fn write_project_vhosts(paths: &Paths, cfg: &LaxConfig, projects: &[ProjectInfo]
         };
         let nginx = format!(
             r#"server {{
-    listen {port};
+    listen 127.0.0.1:{port};
     server_name {domain};
     root "{docroot}";
     index index.html index.htm index.php;
@@ -124,7 +227,7 @@ fn patch_apache_listen(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
         let t = line.trim_start();
         if t.starts_with("Listen ") && !t.contains("443") {
             if !done {
-                out.push_str(&format!("Listen {}\n", cfg.apache_port));
+                out.push_str(&format!("Listen 127.0.0.1:{}\n", cfg.apache_port));
                 done = true;
             }
             continue;
@@ -133,7 +236,7 @@ fn patch_apache_listen(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
         out.push('\n');
     }
     if !done {
-        out.push_str(&format!("\nListen {}\n", cfg.apache_port));
+        out.push_str(&format!("\nListen 127.0.0.1:{}\n", cfg.apache_port));
     }
     fs::write(httpd, out)?;
     Ok(())
@@ -175,7 +278,7 @@ fn write_defaults(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
 
     let nginx = format!(
         r#"server {{
-    listen {port} default_server;
+    listen 127.0.0.1:{port} default_server;
     server_name localhost;
     root "{www}";
     index index.html index.htm index.php;

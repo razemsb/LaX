@@ -130,6 +130,11 @@ const STRINGS = {
   "proj.ctxTerminal": { ru: "Терминал", en: "Terminal", zh: "终端" },
   "share.start": { ru: "Поделиться сайтом", en: "Share site", zh: "分享网站" },
   "share.stop": { ru: "Закрыть публичный доступ", en: "Stop public access", zh: "关闭公开访问" },
+  "share.warning": {
+    ru: "Сайт станет доступен любому, у кого будет ссылка. Продолжить?",
+    en: "Anyone with the link will be able to open the site. Continue?",
+    zh: "任何获得链接的人都将可以访问该网站。是否继续？",
+  },
   "proj.phpDefault": { ru: "PHP по умолчанию", en: "Default PHP", zh: "默认 PHP" },
   "share.public": { ru: "публично", en: "public", zh: "公开" },
   "share.opening": { ru: "открываю доступ…", en: "opening access…", zh: "正在开启访问…" },

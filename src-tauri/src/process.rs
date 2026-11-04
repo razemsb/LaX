@@ -268,6 +268,12 @@ unsafe fn assign_job(child: &Child) -> isize {
         std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
     );
     let handle = child.as_raw_handle() as isize;
-    let _ = AssignProcessToJobObject(job, handle as _);
+    let assigned = AssignProcessToJobObject(job, handle as _);
+    if assigned == 0 {
+        tracing::warn!(
+            "AssignProcessToJobObject failed: kill-on-close not guaranteed for pid {}",
+            child.id()
+        );
+    }
     job as isize
 }

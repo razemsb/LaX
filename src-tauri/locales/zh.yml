@@ -91,6 +91,8 @@ share:
   missing: 未在 bin/cloudflared 中找到 cloudflared——请下载二进制文件（npm run fetch-tools）
   already: 该项目已共享
   not_found: 未在 www 中找到该项目
+  web_off: 请先启动 Web 服务器——隧道没有可提供服务的内容
+  no_port: 没有可用于共享的空闲端口（12000–12999 均被占用）
 
 update:
   no_os_asset: 该版本没有适用于此系统的文件——请打开发布页面
@@ -107,3 +109,6 @@ update:
   installing: 正在安装文件…
   done_files: "完成 · 新增 %{written} 个文件，未变更 %{skipped} 个"
   not_appimage: 这不是 AppImage 文件——请从发布页面手动下载
+  checksum: 正在校验校验和……
+  checksum_mismatch: 校验和不匹配——更新已取消
+  empty_archive: 更新压缩包为空——安装已取消

@@ -102,12 +102,11 @@ pub fn normalize_db_admin(id: &str) -> String {
 
 pub fn normalize_tld(tld: &str) -> String {
     let t = tld.trim().trim_start_matches('.').to_ascii_lowercase();
-    if t.is_empty() {
+    let re = regex_lite::Regex::new(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$").unwrap();
+    if t.is_empty() || !re.is_match(&t) {
         "test".into()
     } else {
-        t.chars()
-            .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '.' { c } else { '-' })
-            .collect()
+        t
     }
 }
 

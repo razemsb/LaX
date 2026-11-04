@@ -166,11 +166,12 @@ fi
 
 # --- Mailpit ---
 MAIL_DIR="$ROOT/bin/mailpit"
+MAILPIT_VER="v1.33.0"
 if [[ ! -x "$MAIL_DIR/mailpit" ]]; then
-  echo "==> Mailpit (${MAILPIT_ARCH})"
+  echo "==> Mailpit $MAILPIT_VER (${MAILPIT_ARCH})"
   mkdir -p "$MAIL_DIR"
   zip="$TMP/mailpit.tar.gz"
-  get "https://github.com/axllent/mailpit/releases/latest/download/mailpit-linux-${MAILPIT_ARCH}.tar.gz" "$zip"
+  get "https://github.com/axllent/mailpit/releases/download/$MAILPIT_VER/mailpit-linux-${MAILPIT_ARCH}.tar.gz" "$zip"
   tar -xzf "$zip" -C "$MAIL_DIR"
   chmod +x "$MAIL_DIR/mailpit"
   echo "ok $MAIL_DIR/mailpit"
@@ -212,9 +213,9 @@ fi
 # --- Composer ---
 COMP_DIR="$ROOT/bin/composer"
 if [[ ! -f "$COMP_DIR/composer.phar" ]]; then
-  echo "==> Composer"
+  echo "==> Composer 2.11.1"
   mkdir -p "$COMP_DIR"
-  get "https://getcomposer.org/download/latest-stable/composer.phar" "$COMP_DIR/composer.phar"
+  get "https://getcomposer.org/download/2.11.1/composer.phar" "$COMP_DIR/composer.phar"
   cat > "$COMP_DIR/composer" <<'SH'
 #!/bin/sh
 DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)

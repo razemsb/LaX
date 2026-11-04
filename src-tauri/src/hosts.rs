@@ -32,6 +32,10 @@ pub fn sync_hosts(projects: &[ProjectInfo], tld: &str, enabled: bool) -> LaxResu
         next.push_str(BEGIN);
         next.push('\n');
         for p in projects {
+            if !crate::projects::is_clean_name(&p.name) {
+                tracing::warn!("hosts: skip project with unsafe name {:?}", p.name);
+                continue;
+            }
             next.push_str(&format!("127.0.0.1 {0}.{1}\n", p.name, tld));
         }
         next.push_str(END);

@@ -56,6 +56,11 @@ function tunnelFor(p: ProjectInfo) {
   return store.snap?.tunnels.find((x) => x.path === p.path) ?? null;
 }
 
+function onShare(path: string) {
+  if (!window.confirm(t("share.warning"))) return;
+  store.shareProject(path);
+}
+
 function acts() {
   return {
     openUrl: (url: string) => store.openUrl(url),
@@ -63,7 +68,7 @@ function acts() {
     openTerminal: (path: string) => store.openTerminal(path),
     openVscode: (path: string) => store.openVscode(path),
     run: (path: string, action: string) => store.runProjectAction(path, action),
-    share: (path: string) => store.shareProject(path),
+    share: onShare,
     unshare: (path: string) => store.unshareProject(path),
   };
 }

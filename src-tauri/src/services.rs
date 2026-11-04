@@ -235,9 +235,9 @@ pub fn start_mailpit(table: &mut ProcessTable, paths: &Paths) -> LaxResult<()> {
     let log_s = log.to_string_lossy().into_owned();
     let args = [
         "--smtp".to_string(),
-        "0.0.0.0:1025".to_string(),
+        "127.0.0.1:1025".to_string(),
         "--listen".to_string(),
-        "0.0.0.0:8025".to_string(),
+        "127.0.0.1:8025".to_string(),
         "--smtp-auth-accept-any".to_string(),
         "--database".to_string(),
         db_s,
@@ -368,6 +368,7 @@ pub fn start_dbgate(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) ->
     }
     let env = [
         ("PORT", DBGATE_UI.to_string()),
+        ("HOST", "127.0.0.1".into()),
         ("SKIP_ALL_AUTH", "1".into()),
         ("LANGUAGE", "auto".into()),
         ("CONNECTIONS", "mariadb".into()),

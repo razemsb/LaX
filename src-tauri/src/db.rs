@@ -98,10 +98,9 @@ pub fn import_sql(paths: &Paths, cfg: &LaxConfig, db: &str, sql: &str) -> LaxRes
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     platform::hide_window(&mut cmd);
-    let out = cmd
-        .output()
-        .map_err(|e| LaxError::msg(format!("mysql import: {e}")))?;
+    let out = cmd.output();
     let _ = fs::remove_file(&tmp);
+    let out = out.map_err(|e| LaxError::msg(format!("mysql import: {e}")))?;
     if !out.status.success() {
         let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
         text.push_str(&String::from_utf8_lossy(&out.stderr));
