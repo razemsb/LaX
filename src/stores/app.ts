@@ -1,7 +1,9 @@
 import { defineStore } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { LaxConfig, PhpExtension, PhpQuickPatch, PhpQuickSettings, Snapshot } from "@/types";
 import { applyTheme } from "@/lib/themes";
+import { normalizeLocale, setLocale, t, type Locale } from "@/lib/i18n";
 
 export const useAppStore = defineStore("app", {
   state: () => ({
@@ -24,6 +26,7 @@ export const useAppStore = defineStore("app", {
       try {
         this.snap = await invoke<Snapshot>("snapshot");
         if (this.snap?.config.theme) applyTheme(this.snap.config.theme);
+        if (this.snap?.config.language) setLocale(normalizeLocale(this.snap.config.language));
         this.error = "";
       } catch (e) {
         this.error = String(e);
@@ -34,6 +37,7 @@ export const useAppStore = defineStore("app", {
     async refreshStatus() {
       try {
         this.snap = await invoke<Snapshot>("snapshot");
+        if (this.snap?.config.language) setLocale(normalizeLocale(this.snap.config.language));
       } catch {
         /* keep last snap */
       }
@@ -66,6 +70,25 @@ export const useAppStore = defineStore("app", {
         throw e;
       }
     },
+    async setLanguage(language: Locale) {
+      setLocale(language);
+      this.error = "";
+      try {
+        this.snap = await invoke<Snapshot>("set_language", { language });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
+    async setWindowMode(mode: string) {
+      this.error = "";
+      try {
+        this.snap = await invoke<Snapshot>("set_window_mode", { mode });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
     async setDbAdmin(id: string) {
       this.error = "";
       try {
@@ -78,7 +101,7 @@ export const useAppStore = defineStore("app", {
     async installDbGate() {
       this.busy = true;
       this.error = "";
-      this.updateProgress = "ставлю DbGate… ~350 МБ, несколько минут";
+      this.updateProgress = t("store.installDbgate");
       try {
         this.snap = await invoke<Snapshot>("install_dbgate");
       } catch (e) {
@@ -117,6 +140,33 @@ export const useAppStore = defineStore("app", {
       this.error = "";
       try {
         await invoke("run_project_action", { path, action });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
+    async shareProject(path: string) {
+      this.error = "";
+      try {
+        this.snap = await invoke<Snapshot>("share_project", { path });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
+    async setProjectPhp(path: string, version: string | null) {
+      this.error = "";
+      try {
+        this.snap = await invoke<Snapshot>("set_project_php", { path, version });
+      } catch (e) {
+        this.error = String(e);
+        throw e;
+      }
+    },
+    async unshareProject(path: string) {
+      this.error = "";
+      try {
+        this.snap = await invoke<Snapshot>("unshare_project", { path });
       } catch (e) {
         this.error = String(e);
         throw e;
@@ -185,7 +235,7 @@ export const useAppStore = defineStore("app", {
     async applyUpdate() {
       this.busy = true;
       this.error = "";
-      this.updateProgress = "скачиваю обновление…";
+      this.updateProgress = t("store.downloadingUpdate");
       try {
         await invoke("apply_update");
         await this.refresh();
@@ -200,6 +250,12 @@ export const useAppStore = defineStore("app", {
     },
     clearError() {
       this.error = "";
+    },
+    async hideWindow() {
+      await getCurrentWindow().hide();
+    },
+    async quitApp() {
+      await invoke("quit_app");
     },
     async dismissNotice(which: "message" | "update" | "port") {
       if (which === "port" && this.snap?.portConflict) {

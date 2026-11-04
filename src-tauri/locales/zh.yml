@@ -1,0 +1,109 @@
+tray:
+  open: 打开 LaX
+  quit: 退出
+
+err:
+  lock_poisoned: 状态锁已损坏
+  unknown_ini: "未知的 ini：%{which}"
+  unknown_action: "未知的操作：%{action}"
+  unknown_service: "未知的服务：%{id}"
+  project_outside_www: 项目必须位于 www 目录内
+  package_json: 未找到 package.json
+  composer_json: 未找到 composer.json
+  bad_script_name: 脚本名称无效
+  invalid_port: 端口无效
+  unknown_theme: 未知主题
+
+msg:
+  wordpress_ready: "WordPress 已就绪 · http://localhost/%{slug}/"
+  dbgate_installed: DbGate 安装完成，正在打开 :8030
+  latest_version: "已是最新版本 · v%{version}"
+  no_update: 没有可用更新
+  downloading_update: 正在下载更新…
+  files_updated: 文件已更新，请重启 LaX
+  stack_auto_started: 服务栈已自动启动
+  default_config: Started with default config
+  site_php_set: 站点 PHP 已更新 · Web 服务器已重启
+
+db:
+  invalid_name: 数据库名无效
+  name_starts_with_letter: 数据库名必须以字母开头
+  latin_only: 数据库名只能包含拉丁字母、数字和下划线 _
+  mysql_client: 未找到 mysql 客户端
+  list_failed: "无法获取数据库列表（MariaDB 是否已启动？）\n%{out}"
+  create_failed: "无法创建数据库：\n%{out}"
+  dump_too_big: 转储文件超过 40 MB——请通过 mysql CLI 导入
+  import_failed: "导入失败：\n%{text}"
+
+php:
+  ini_not_found: 未找到 php.ini
+  bad_memory: memory_limit 无效
+  bad_upload: upload_max_filesize 无效
+  bad_version: "未知的 PHP 版本：%{version}"
+  xdebug_missing: 此 PHP 版本的 ext/ 中没有 php_xdebug——请放入 dll 后重新启用
+
+platform:
+  http_only: 仅允许 http(s) 链接
+
+proj:
+  exists: "项目“%{slug}”已存在"
+  node_missing_fetch: 未在 bin/node 中找到 Node。请运行 npm run fetch-tools
+  unknown_template: "未知模板：%{other}"
+  laravel_scaffold: "Laravel：请在终端执行 composer create-project → %{slug}"
+  vite_scaffold: "Vite + Vue：请在终端执行 npm create → %{slug}"
+  wp_archive: WordPress 压缩包为空或格式异常
+  wp_download_failed: "WordPress 下载失败：%{e}"
+  not_listed: 项目已创建，但未显示在列表中
+
+svc:
+  apache_linux: Linux 便携版不包含 Apache（无 httpd）。请改用 Nginx——已在 bin/nginx 中。脚本：scripts/fetch-linux-stack.sh
+  port_in_use_web: "端口 %{port} 已被占用——请先停止 Laragon 或其他 Web 服务器"
+  port_in_use_apache: "端口 %{port} 已被占用——请先停止 Laragon 或 Apache"
+  port_in_use_mysql: "端口 %{port} 已被占用——请先停止其他 MySQL/MariaDB 实例"
+  nginx_missing: "未找到 nginx：%{dir}。在 Linux 上请运行 bash scripts/fetch-linux-stack.sh"
+  mariadb_missing: "未找到 MariaDB：%{dir}。在 Linux 上请运行 bash scripts/fetch-linux-stack.sh"
+  php_cgi_missing: "未在 %{dir} 中找到 PHP CGI/FPM。在 Linux 上请运行 bash scripts/fetch-linux-stack.sh"
+  mailpit_missing_skip: bin/mailpit 中未找到 mailpit——已跳过
+  binary_missing: "未找到可执行文件：%{path}"
+  apache_config_test: "Apache 配置测试失败：\n%{out}"
+  datadir_failed: "MariaDB 数据目录初始化失败：\n%{out}"
+  wait_port_timeout: "服务未能及时开放端口 %{port}"
+  node_required_dbgate: 未在 bin/node 中找到 Node。没有它无法安装 DbGate。
+  node_next_to_bin: bin/node 附近未找到 node
+  npm_next_to_node: 便携式 Node 旁未找到 npm
+  npm_spawn_failed: "无法启动 npm：%{e}"
+  dbgate_npm_failed: npm install dbgate-serve 失败
+  dbgate_missing_after_install: npm install 后未找到 DbGate。请检查网络与日志。
+  dbgate_not_found_skip: usr/apps/dbgate 中未找到 DbGate——已跳过
+  node_not_found_start: 未找到 Node——无法启动 DbGate
+
+state:
+  unknown_process: 未知
+  port_taken: "端口 %{port} 被 %{process} 占用（PID %{pid}）"
+  port_not_open: "端口 %{port} 未开放，请查看 Apache/Nginx 日志。"
+  mailpit_missing_linux: 未找到 Mailpit。请运行 bash scripts/fetch-linux-stack.sh——可执行文件会出现在 bin/mailpit 中
+  mailpit_missing_win: 未找到 Mailpit。请运行 scripts/fetch-tools.ps1——可执行文件会出现在 bin/mailpit 中
+  dbgate_not_installed: DbGate 未安装。设置 → 数据库面板 → 下载 DbGate
+  linux_port_needs_root: "在 Linux 上端口 %{port} 需要 root/capabilities 权限，请在设置中改为 8080。"
+
+share:
+  starting: 正在打开隧道……地址马上就会出现
+  missing: 未在 bin/cloudflared 中找到 cloudflared——请下载二进制文件（npm run fetch-tools）
+  already: 该项目已共享
+  not_found: 未在 www 中找到该项目
+
+update:
+  no_os_asset: 该版本没有适用于此系统的文件——请打开发布页面
+  downloading: 正在下载更新…
+  preparing: 已下载，正在准备文件…
+  installing_appimage: 正在安装 AppImage…
+  stopping: 正在停止服务栈…
+  restarting: 正在重启 LaX…
+  unknown_format: 未知的更新格式
+  download_failed: "下载失败：%{e}"
+  pct: "正在下载 %{pct}%"
+  unpacking: 正在解压…
+  installing_pct: "正在安装文件… %{pct}%"
+  installing: 正在安装文件…
+  done_files: "完成 · 新增 %{written} 个文件，未变更 %{skipped} 个"
+  not_appimage: 这不是 AppImage 文件——请从发布页面手动下载

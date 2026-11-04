@@ -121,16 +121,16 @@ pub fn download_asset(
     let url = info
         .download_url
         .as_deref()
-        .ok_or_else(|| LaxError::msg("в релизе нет файла для этой ОС — открой страницу релиза"))?;
+        .ok_or_else(|| LaxError::msg(rust_i18n::t!("update.no_os_asset")))?;
     let name = info
         .download_name
         .as_deref()
         .unwrap_or("LaX-update.bin");
     fs::create_dir_all(root.join("tmp"))?;
     let dest = root.join("tmp").join(name);
-    progress("скачиваю обновление…");
+    progress(&rust_i18n::t!("update.downloading"));
     download(url, &dest, &mut progress)?;
-    progress("скачано, готовлю файлы…");
+    progress(&rust_i18n::t!("update.preparing"));
     Ok(dest)
 }
 
@@ -145,7 +145,7 @@ pub fn install_asset(
         .unwrap_or("")
         .to_ascii_lowercase();
     if name.ends_with(".appimage") {
-        progress("ставлю AppImage…");
+        progress(&rust_i18n::t!("update.installing_appimage"));
         install_appimage(dest)?;
         return Ok(());
     }
@@ -154,7 +154,7 @@ pub fn install_asset(
         let _ = fs::remove_file(dest);
         return Ok(());
     }
-    Err(LaxError::msg("неизвестный формат обновления"))
+    Err(LaxError::msg(rust_i18n::t!("update.unknown_format")))
 }
 
 fn download(url: &str, dest: &Path, progress: &mut impl FnMut(&str)) -> LaxResult<()> {
@@ -166,7 +166,7 @@ fn download(url: &str, dest: &Path, progress: &mut impl FnMut(&str)) -> LaxResul
     let resp = agent
         .get(url)
         .call()
-        .map_err(|e| LaxError::msg(format!("скачивание: {e}")))?;
+        .map_err(|e| LaxError::msg(rust_i18n::t!("update.download_failed", e = e.to_string())))?;
     let total = resp
         .header("Content-Length")
         .and_then(|s| s.parse::<u64>().ok())
@@ -188,7 +188,7 @@ fn download(url: &str, dest: &Path, progress: &mut impl FnMut(&str)) -> LaxResul
             let pct = copied.saturating_mul(100) / total;
             if pct != last_pct {
                 last_pct = pct;
-                progress(&format!("скачиваю {pct}%"));
+                progress(&rust_i18n::t!("update.pct", pct = pct));
             }
         }
     }
@@ -202,7 +202,7 @@ fn download(url: &str, dest: &Path, progress: &mut impl FnMut(&str)) -> LaxResul
 }
 
 fn install_zip(root: &Path, zip_path: &Path, progress: &mut impl FnMut(&str)) -> LaxResult<()> {
-    progress("распаковываю…");
+    progress(&rust_i18n::t!("update.unpacking"));
     let file = fs::File::open(zip_path)?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| LaxError::msg(e.to_string()))?;
     let prefix = zip_prefix(&mut archive);
@@ -211,7 +211,7 @@ fn install_zip(root: &Path, zip_path: &Path, progress: &mut impl FnMut(&str)) ->
     let mut skipped = 0u32;
     for i in 0..archive.len() {
         if i % 80 == 0 {
-            progress(&format!("раскладываю файлы… {}%", i * 100 / total));
+            progress(&rust_i18n::t!("update.installing_pct", pct = i * 100 / total));
         }
         let mut entry = archive
             .by_index(i)
@@ -249,7 +249,7 @@ fn install_zip(root: &Path, zip_path: &Path, progress: &mut impl FnMut(&str)) ->
         io::copy(&mut entry, &mut out)?;
         written += 1;
     }
-    progress(&format!("готово · новых файлов {written}, без изменений {skipped}"));
+    progress(&rust_i18n::t!("update.done_files", written = written, skipped = skipped));
     Ok(())
 }
 
@@ -350,9 +350,7 @@ fn appimage_path() -> Option<PathBuf> {
 
 fn install_appimage(downloaded: &Path) -> LaxResult<()> {
     let Some(current) = appimage_path() else {
-        return Err(LaxError::msg(
-            "это не AppImage — скачай файл вручную со страницы релиза",
-        ));
+        return Err(LaxError::msg(rust_i18n::t!("update.not_appimage")));
     };
     let staged = PathBuf::from(format!("{}.new", current.display()));
     fs::copy(downloaded, &staged)?;

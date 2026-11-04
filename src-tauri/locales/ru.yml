@@ -1,0 +1,109 @@
+tray:
+  open: Открыть LaX
+  quit: Выход
+
+err:
+  lock_poisoned: мьютекс состояния повреждён
+  unknown_ini: "неизвестный ini: %{which}"
+  unknown_action: "неизвестное действие: %{action}"
+  unknown_service: "неизвестный сервис: %{id}"
+  project_outside_www: проект должен быть внутри www
+  package_json: package.json не найден
+  composer_json: composer.json не найден
+  bad_script_name: недопустимое имя скрипта
+  invalid_port: некорректный порт
+  unknown_theme: неизвестная тема
+
+msg:
+  wordpress_ready: "WordPress готов · http://localhost/%{slug}/"
+  dbgate_installed: DbGate установлен. Открывается на :8030
+  latest_version: "у тебя последняя версия · v%{version}"
+  no_update: нет обновления
+  downloading_update: скачиваю обновление…
+  files_updated: файлы обновлены. Перезапусти LaX
+  stack_auto_started: стек запущен автоматически
+  default_config: Started with default config
+  site_php_set: PHP для сайта обновлён · веб-сервер перезапущен
+
+db:
+  invalid_name: некорректное имя базы
+  name_starts_with_letter: имя базы должно начинаться с буквы
+  latin_only: в имени базы только латиница, цифры и _
+  mysql_client: mysql-клиент не найден
+  list_failed: "не удалось получить список баз (MariaDB запущена?)\n%{out}"
+  create_failed: "не удалось создать базу:\n%{out}"
+  dump_too_big: дамп больше 40 МБ — импортируй через mysql CLI
+  import_failed: "импорт не удался:\n%{text}"
+
+php:
+  ini_not_found: php.ini не найден
+  bad_memory: некорректный memory_limit
+  bad_upload: некорректный upload_max_filesize
+  bad_version: "неизвестная версия PHP: %{version}"
+  xdebug_missing: нет php_xdebug в ext/ этой версии PHP — положи dll и включи снова
+
+platform:
+  http_only: разрешены только http(s) ссылки
+
+proj:
+  exists: "проект '%{slug}' уже есть"
+  node_missing_fetch: Node не найден в bin/node. Запусти npm run fetch-tools
+  unknown_template: "неизвестный шаблон: %{other}"
+  laravel_scaffold: "Laravel: в терминале composer create-project → %{slug}"
+  vite_scaffold: "Vite + Vue: в терминале npm create → %{slug}"
+  wp_archive: архив WordPress пустой или неожиданный
+  wp_download_failed: "скачивание WordPress: %{e}"
+  not_listed: проект создан, но не попал в список
+
+svc:
+  apache_linux: "Apache на Linux не входит в портативный стек (нет httpd). Включи Nginx — он уже в bin/nginx. Скрипт: scripts/fetch-linux-stack.sh"
+  port_in_use_web: "port %{port} is already in use — stop Laragon or the other web server first"
+  port_in_use_apache: "port %{port} is already in use — stop Laragon or Apache first"
+  port_in_use_mysql: "port %{port} is already in use — stop the other MySQL/MariaDB instance"
+  nginx_missing: "nginx не найден: %{dir}. На Linux: bash scripts/fetch-linux-stack.sh"
+  mariadb_missing: "MariaDB не найден: %{dir}. На Linux: bash scripts/fetch-linux-stack.sh"
+  php_cgi_missing: "PHP CGI/FPM не найден в %{dir}. На Linux: bash scripts/fetch-linux-stack.sh"
+  mailpit_missing_skip: mailpit not found in bin/mailpit — skip
+  binary_missing: "binary not found: %{path}"
+  apache_config_test: "Apache config test failed:\n%{out}"
+  datadir_failed: "failed to initialize MariaDB datadir:\n%{out}"
+  wait_port_timeout: "service did not open port %{port} in time"
+  node_required_dbgate: Node не найден в bin/node. Без него DbGate не ставится.
+  node_next_to_bin: node не найден рядом с bin/node
+  npm_next_to_node: npm не найден рядом с портативным Node
+  npm_spawn_failed: "не удалось запустить npm: %{e}"
+  dbgate_npm_failed: npm install dbgate-serve не удался
+  dbgate_missing_after_install: DbGate не появился после npm install. Проверь сеть и логи.
+  dbgate_not_found_skip: DbGate not found in usr/apps/dbgate — skip
+  node_not_found_start: Node not found — cannot start DbGate
+
+state:
+  unknown_process: неизвестно
+  port_taken: "порт %{port} занят: %{process} (PID %{pid})"
+  port_not_open: "порт %{port} не открылся. Смотри логи Apache/Nginx."
+  mailpit_missing_linux: Mailpit не найден. Запусти bash scripts/fetch-linux-stack.sh — бинарник появится в bin/mailpit
+  mailpit_missing_win: Mailpit не найден. Запусти scripts/fetch-tools.ps1 — бинарник появится в bin/mailpit
+  dbgate_not_installed: DbGate не установлен. Настройки → панель баз → Скачать DbGate
+  linux_port_needs_root: "порт %{port} на Linux недоступен без root/capabilities. Поставь 8080 в Настройках."
+
+share:
+  starting: открываю туннель… адрес появится через секунду
+  missing: cloudflared не найден в bin/cloudflared — скачай бинарник (npm run fetch-tools)
+  already: этот проект уже расшарен
+  not_found: проект не найден в www
+
+update:
+  no_os_asset: в релизе нет файла для этой ОС — открой страницу релиза
+  downloading: скачиваю обновление…
+  preparing: скачано, готовлю файлы…
+  installing_appimage: ставлю AppImage…
+  stopping: останавливаю стек…
+  restarting: перезапускаю LaX…
+  unknown_format: неизвестный формат обновления
+  download_failed: "скачивание: %{e}"
+  pct: "скачиваю %{pct}%"
+  unpacking: распаковываю…
+  installing_pct: "раскладываю файлы… %{pct}%"
+  installing: раскладываю файлы…
+  done_files: "готово · новых файлов %{written}, без изменений %{skipped}"
+  not_appimage: это не AppImage — скачай файл вручную со страницы релиза

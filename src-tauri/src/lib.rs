@@ -1,3 +1,5 @@
+rust_i18n::i18n!("locales", fallback = "ru");
+
 mod commands;
 mod config;
 mod db;
@@ -13,16 +15,31 @@ mod process;
 mod projects;
 mod services;
 mod state;
+mod tunnel;
 mod update;
 mod vhosts;
 
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager,
+    Emitter, Manager,
 };
 
 use crate::state::AppState;
+
+pub(crate) fn sync_locale(lang: &str) {
+    rust_i18n::set_locale(match lang {
+        "en" => "en",
+        "zh" => "zh",
+        _ => "ru",
+    });
+}
+
+pub(crate) fn tray_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    let show = MenuItem::with_id(app, "show", rust_i18n::t!("tray.open"), true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", rust_i18n::t!("tray.quit"), true, None::<&str>)?;
+    Menu::with_items(app, &[&show, &quit])
+}
 
 pub fn run() {
     let _ = std::fs::create_dir_all(crash_log_dir());
@@ -61,9 +78,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(state)
         .setup(|app| {
-            let show = MenuItem::with_id(app, "show", "Open LaX", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &quit])?;
+            let menu = tray_menu(&app.handle())?;
             let mut tray = TrayIconBuilder::with_id("tray")
                 .menu(&menu)
                 .show_menu_on_left_click(true)
@@ -99,11 +114,20 @@ pub fn run() {
                     .unwrap_or_else(|| "noir".into());
                 apply_window_theme_to(&win, &theme);
                 let _ = win.set_title(&format!("LaX {}", crate::update::APP_VERSION));
+                let mode = app
+                    .state::<AppState>()
+                    .inner
+                    .lock()
+                    .ok()
+                    .map(|g| g.config.window_mode.clone())
+                    .unwrap_or_else(|| "medium".into());
+                apply_window_mode(&win, &mode);
+                let _ = win.center();
                 let win_h = win.clone();
                 win.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                         api.prevent_close();
-                        let _ = win_h.hide();
+                        let _ = win_h.emit("close-requested", ());
                     }
                 });
             }
@@ -114,14 +138,14 @@ pub fn run() {
                 .ok()
                 .map(|g| g.config.auto_start)
                 .unwrap_or(false);
-            if auto {
-                let auto_inner = inner.clone();
+                    if auto {
+                    let auto_inner = inner.clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(700));
                     if let Ok(mut g) = auto_inner.lock() {
                         match g.start_all() {
                             Ok(()) => {
-                                g.last_message = Some("стек запущен автоматически".into());
+                                g.last_message = Some(rust_i18n::t!("msg.stack_auto_started").into_owned());
                             }
                             Err(e) => {
                                 g.last_message = Some(e.to_string());
@@ -159,6 +183,8 @@ pub fn run() {
             commands::save_config,
             commands::set_theme,
             commands::set_db_admin,
+            commands::set_language,
+            commands::set_window_mode,
             commands::install_dbgate,
             commands::read_logs,
             commands::list_php_extensions,
@@ -171,6 +197,9 @@ pub fn run() {
             commands::open_terminal,
             commands::open_vscode,
             commands::run_project_action,
+            commands::share_project,
+            commands::unshare_project,
+            commands::set_project_php,
             commands::switch_web_port,
             commands::list_databases,
             commands::create_database,
@@ -179,6 +208,7 @@ pub fn run() {
             commands::apply_update,
             commands::dismiss_update,
             commands::dismiss_notice,
+            commands::quit_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running LaX");
@@ -192,6 +222,16 @@ pub(crate) fn apply_window_theme(app: &tauri::AppHandle, theme: &str) {
     if let Some(win) = app.get_webview_window("main") {
         apply_window_theme_to(&win, theme);
     }
+}
+
+pub(crate) fn apply_window_mode(win: &tauri::WebviewWindow, mode: &str) {
+    use tauri::{LogicalSize, Size};
+    let (w, h) = match mode {
+        "mini" => (480.0, 640.0),
+        "large" => (1520.0, 980.0),
+        _ => (1080.0, 780.0),
+    };
+    let _ = win.set_size(Size::Logical(LogicalSize::new(w, h)));
 }
 
 fn apply_window_theme_to(win: &tauri::WebviewWindow, theme: &str) {

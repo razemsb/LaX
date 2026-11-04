@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { useAppStore } from "@/stores/app";
+import { t } from "@/lib/i18n";
 
 const store = useAppStore();
 const which = ref("apache");
@@ -46,8 +47,8 @@ watch(which, load);
         :key="tab.id"
         class="rounded-lg px-3 py-1.5 text-sm transition"
         :class="which === tab.id
-          ? 'bg-white/8 text-text shadow-[inset_0_-2px_0_#e02430]'
-          : 'text-muted hover:bg-white/4 hover:text-text'"
+          ? 'bg-lift text-text shadow-[inset_0_-2px_0_var(--accent)]'
+          : 'text-muted hover:bg-lift hover:text-text'"
         @click="which = tab.id"
       >
         {{ tab.label }}
@@ -56,11 +57,11 @@ watch(which, load);
         v-model="q"
         data-page-search
         type="search"
-        placeholder="поиск в логе  Ctrl+F"
+        :placeholder="t('logs.search')"
         class="field ml-auto min-w-0 max-w-56 !py-1.5 text-xs"
       />
-      <button class="btn-ghost rounded-lg px-3 py-1.5 text-xs" @click="load">Обновить</button>
+      <button class="btn-ghost rounded-lg px-3 py-1.5 text-xs" @click="load">{{ t("logs.refresh") }}</button>
     </div>
-    <pre class="scrollbar min-h-0 flex-1 overflow-auto rounded-xl border border-line bg-[#0a0a0b] p-5 text-xs leading-6"><span v-for="(line, i) in lines" :key="i" :class="kind(line)" class="block whitespace-pre-wrap">{{ line }}</span></pre>
+    <pre class="scrollbar log-view min-h-0 flex-1 overflow-auto rounded-xl border border-line p-5 text-xs leading-6"><span v-for="(line, i) in lines" :key="i" :class="kind(line)" class="block whitespace-pre-wrap">{{ line }}</span></pre>
   </div>
 </template>

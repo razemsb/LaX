@@ -1,6 +1,6 @@
 [package]
 name = "lax"
-version = "0.1.9"
+version = "0.2.0"
 description = "LaX — portable local development stack"
 authors = ["LaX"]
 edition = "2021"
@@ -27,6 +27,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dunce = "1"
 ureq = { version = "2.12", features = ["json"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
+rust-i18n = "4.2.4"
+regex-lite = "0.1.9"
+os_pipe = "1.2.3"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = [

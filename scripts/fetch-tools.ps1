@@ -78,6 +78,19 @@ if (-not (Test-Path $nodeExe)) {
     Write-Host "skip Node (already in bin/node)"
 }
 
+# --- cloudflared (quick tunnels, public share) ---
+$cfDir = Join-Path $Root "bin\cloudflared"
+$cfExe = Join-Path $cfDir "cloudflared.exe"
+if (-not (Test-Path $cfExe)) {
+    Write-Host "==> cloudflared (win-amd64)"
+    New-Item -ItemType Directory -Force -Path $cfDir | Out-Null
+    $rel = (Invoke-RestMethod "https://api.github.com/repos/cloudflare/cloudflared/releases/latest").tag_name
+    Get-Zip "https://github.com/cloudflare/cloudflared/releases/download/$rel/cloudflared-windows-amd64.exe" $cfExe
+    Write-Host "ok $cfExe"
+} else {
+    Write-Host "skip cloudflared (already in bin/cloudflared)"
+}
+
 # --- DbGate (web, community) ---
 $dbgateDir = Join-Path $Root "usr\apps\dbgate"
 $dbgateJs = Join-Path $dbgateDir "node_modules\dbgate-serve\bin\dbgate-serve.js"

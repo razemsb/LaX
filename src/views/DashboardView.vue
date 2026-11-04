@@ -2,14 +2,11 @@
 import { computed, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import {
-  Blocks,
   Database,
+  FolderKanban,
   FolderOpen,
   Globe,
   Inbox,
-  Layers,
-  Server,
-  Table2,
   Terminal,
 } from "lucide-vue-next";
 import { useAppStore } from "@/stores/app";
@@ -17,6 +14,8 @@ import StatusPill from "@/components/StatusPill.vue";
 import { showContextMenu } from "@/composables/contextMenu";
 import { projectContextItems } from "@/lib/projectCommands";
 import { dbAdminLabel, dbAdminUrl } from "@/lib/dbAdmin";
+import { SERVICE_ICONS, SERVICE_NAMES } from "@/lib/serviceMeta";
+import { t } from "@/lib/i18n";
 import type { ProjectInfo } from "@/types";
 
 const store = useAppStore();
@@ -30,24 +29,6 @@ const site = computed(() => {
     : store.snap?.config.apachePort;
   return port && port !== 80 ? `http://localhost:${port}/` : "http://localhost/";
 });
-
-const names: Record<string, string> = {
-  apache: "Apache",
-  nginx: "Nginx",
-  mariadb: "MariaDB",
-  php: "PHP",
-  mailpit: "Mailpit",
-  dbgate: "DbGate",
-};
-
-const icons: Record<string, typeof Server> = {
-  apache: Server,
-  nginx: Layers,
-  mariadb: Database,
-  php: Blocks,
-  mailpit: Inbox,
-  dbgate: Table2,
-};
 
 const databases = ref<string[]>([]);
 const newDb = ref("");
@@ -99,7 +80,7 @@ async function onSql(ev: Event) {
   try {
     const sql = await file.text();
     await store.importSql(selectedDb.value, sql);
-    dbNote.value = `импортировано в ${selectedDb.value}`;
+    dbNote.value = t("dash.dbImported", { db: selectedDb.value });
   } catch (e) {
     dbNote.value = String(e);
   } finally {
@@ -113,6 +94,10 @@ async function toggle(id: string, running: boolean) {
   else await store.startService(id);
 }
 
+function tunnelFor(p: ProjectInfo) {
+  return store.snap?.tunnels.find((x) => x.path === p.path) ?? null;
+}
+
 function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
   showContextMenu(e, projectContextItems(p, {
     openUrl: (url) => store.openUrl(url),
@@ -120,7 +105,9 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
     openTerminal: (path) => store.openTerminal(path),
     openVscode: (path) => store.openVscode(path),
     run: (path, action) => store.runProjectAction(path, action),
-  }));
+    share: (path) => store.shareProject(path),
+    unshare: (path) => store.unshareProject(path),
+  }, tunnelFor(p)));
 }
 </script>
 
@@ -137,12 +124,12 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
       >
         <div class="mb-4 flex items-center justify-between gap-2">
           <span class="icon-well" :class="s.running ? 'text-ok bg-ok/10' : ''">
-            <component :is="icons[s.id] ?? Server" :size="15" />
+            <component :is="SERVICE_ICONS[s.id] ?? Database" :size="15" />
           </span>
-          <StatusPill :on="s.running" />
+          <StatusPill :on="s.running" :busy="store.busy && !s.running" />
         </div>
         <div class="mt-auto min-w-0">
-          <div class="truncate text-[15px] font-medium sm:text-base">{{ names[s.id] ?? s.name }}</div>
+          <div class="truncate text-[15px] font-medium sm:text-base">{{ SERVICE_NAMES[s.id] ?? s.name }}</div>
           <div class="mt-1 flex items-center justify-between gap-2 text-[11px] text-muted">
             <span>{{ s.port ? `:${s.port}` : "—" }}</span>
             <span class="truncate">{{ s.version }}</span>
@@ -153,51 +140,51 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
 
     <section class="grid grid-cols-1 gap-3 xl:grid-cols-[1.5fr_1fr]">
       <div class="surface p-4 sm:p-5 xl:p-6">
-        <div class="eyebrow">сайты</div>
+        <div class="eyebrow">{{ t("dash.sites") }}</div>
         <p class="mt-2 max-w-lg text-sm leading-relaxed text-muted">
-          Проекты из <span class="text-text">www</span> открываются как
+          {{ t("dash.sitesHint") }} <span class="text-text">www</span> {{ t("dash.sitesHint2") }}
         </p>
         <code class="mt-2 inline-block rounded-md bg-lift px-2 py-1 text-xs text-text">http://localhost/папка/</code>
         <div class="mt-5 flex flex-wrap gap-2">
-          <button class="btn-accent rounded-lg px-4 py-2 text-sm" @click="store.openUrl(site)">localhost</button>
-          <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(dbUrl())">{{ dbAdminLabel(store.snap.config) }}</button>
-          <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl('http://localhost:8025')">почта</button>
-          <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openPath(www)">папка www</button>
+          <button class="btn-primary rounded-lg px-4 py-2 text-sm" @click="store.openUrl(site)">localhost</button>
+          <button class="btn-ghost btn-chip rounded-lg px-4 py-2 text-sm" @click="store.openUrl(dbUrl())">{{ dbAdminLabel(store.snap.config) }}</button>
+          <button class="btn-ghost btn-chip rounded-lg px-4 py-2 text-sm" @click="store.openUrl('http://localhost:8025')">{{ t("dash.mail") }}</button>
+          <button class="btn-ghost btn-chip rounded-lg px-4 py-2 text-sm" @click="store.openPath(www)">{{ t("dash.wwwFolder") }}</button>
         </div>
         <p v-if="!store.snap.mailpitAvailable" class="mt-3 text-xs leading-relaxed text-muted">
-          Mailpit не найден — письма mail() никуда не попадут. Запусти
+          {{ t("dash.mailpitMissing") }}
           <span class="text-text">npm run fetch-tools</span>
         </p>
         <p v-else class="mt-3 text-xs leading-relaxed text-muted">
-          PHP mail() ловит Mailpit. Laravel: MAIL_HOST=127.0.0.1 MAIL_PORT=1025 MAIL_MAILER=smtp
+          {{ t("dash.mailpitOk") }}
         </p>
         <p
           v-if="store.snap.config.dbAdmin === 'dbgate' && !store.snap.dbgateAvailable"
           class="mt-2 text-xs leading-relaxed text-muted"
         >
-          DbGate не установлен —
+          {{ t("dash.dbgateMissing") }}
           <button
             type="button"
             class="text-text underline decoration-line underline-offset-2"
             :disabled="store.busy"
             @click="store.installDbGate()"
           >
-            скачать (~350 МБ)
+            {{ t("dash.dbgateDownload") }}
           </button>
         </p>
       </div>
       <div class="surface grid grid-cols-1 overflow-hidden p-1 sm:grid-cols-2 xl:grid-cols-1">
         <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openPath(store.snap.root)">
-          <span class="icon-well"><FolderOpen :size="15" /></span> Корень LaX
+          <span class="icon-well"><FolderOpen :size="15" /></span> {{ t("dash.rootFolder") }}
         </button>
         <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openTerminal(www)">
-          <span class="icon-well"><Terminal :size="15" /></span> Терминал
+          <span class="icon-well"><Terminal :size="15" /></span> {{ t("dash.terminal") }}
         </button>
         <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openUrl(site)">
-          <span class="icon-well"><Globe :size="15" /></span> Браузер
+          <span class="icon-well"><Globe :size="15" /></span> {{ t("dash.browser") }}
         </button>
         <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift" @click="store.openUrl('http://localhost:8025')">
-          <span class="icon-well"><Inbox :size="15" /></span> Ящик Mailpit
+          <span class="icon-well"><Inbox :size="15" /></span> {{ t("dash.mailpitBox") }}
         </button>
         <button class="flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm hover:bg-lift sm:col-span-2 xl:col-span-1" @click="store.openUrl(dbUrl())">
           <span class="icon-well"><Database :size="15" /></span> {{ dbAdminLabel(store.snap.config) }}
@@ -206,30 +193,40 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
     </section>
 
     <section class="surface p-4 sm:p-5 xl:p-6">
-      <div class="eyebrow">базы MariaDB</div>
-      <p v-if="!dbUp" class="mt-2 text-sm text-muted">Сначала запусти MariaDB.</p>
+      <div class="eyebrow">{{ t("dash.databases") }}</div>
+      <div v-if="!dbUp" class="mt-4 flex flex-col items-start gap-3">
+        <span class="icon-well"><Database :size="15" /></span>
+        <p class="text-sm text-muted">{{ t("dash.dbStartFirst") }}</p>
+        <button
+          class="btn-primary rounded-lg px-4 py-2 text-sm"
+          :disabled="store.busy"
+          @click="store.startService('mariadb')"
+        >
+          {{ t("dash.dbStartBtn") }}
+        </button>
+      </div>
       <div v-else class="mt-4 space-y-3">
         <div class="flex flex-col gap-2 sm:flex-row">
-          <input v-model="newDb" placeholder="имя_базы" class="field min-w-0 flex-1" @keydown.enter.prevent="createDb" />
-          <button class="btn-accent shrink-0 rounded-lg px-4 py-2 text-sm" :disabled="store.busy || !newDb.trim()" @click="createDb">
-            Создать
+          <input v-model="newDb" :placeholder="t('dash.dbName')" class="field min-w-0 flex-1" @keydown.enter.prevent="createDb" />
+          <button class="btn-primary shrink-0 rounded-lg px-4 py-2 text-sm" :disabled="store.busy || !newDb.trim()" @click="createDb">
+            {{ t("dash.dbCreate") }}
           </button>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select v-model="selectedDb" class="field min-w-0 flex-1">
-            <option disabled value="">выбери базу</option>
+            <option disabled value="">{{ t("dash.dbPick") }}</option>
             <option v-for="d in databases" :key="d" :value="d">{{ d }}</option>
           </select>
           <div class="flex gap-2">
             <button
-              class="btn-ghost min-w-0 flex-1 rounded-lg px-4 py-2 text-sm sm:flex-none"
+              class="btn-ghost btn-chip min-w-0 flex-1 rounded-lg px-4 py-2 text-sm sm:flex-none"
               :disabled="!selectedDb"
               @click="store.openUrl(dbUrl(selectedDb))"
             >
               {{ dbAdminLabel(store.snap.config) }}
             </button>
-            <label class="btn-ghost flex-1 cursor-pointer rounded-lg px-4 py-2 text-center text-sm sm:flex-none" :class="{ 'opacity-50': !selectedDb || importing }">
-              {{ importing ? "импорт…" : "импорт .sql" }}
+            <label class="btn-ghost btn-chip flex-1 cursor-pointer rounded-lg px-4 py-2 text-center text-sm sm:flex-none" :class="{ 'opacity-50': !selectedDb || importing }">
+              {{ importing ? t("dash.dbImporting") : t("dash.dbImport") }}
               <input type="file" accept=".sql,.txt" class="hidden" :disabled="!selectedDb || importing" @change="onSql" />
             </label>
           </div>
@@ -240,10 +237,16 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
 
     <section>
       <div class="mb-3 flex items-center justify-between">
-        <h3 class="text-sm font-medium">Проекты</h3>
-        <RouterLink to="/projects" class="text-xs text-muted hover:text-text">все</RouterLink>
+        <h3 class="text-sm font-medium">{{ t("dash.projects") }}</h3>
+        <RouterLink to="/projects" class="text-xs text-muted hover:text-text">{{ t("dash.all") }}</RouterLink>
       </div>
-      <div v-if="!store.snap.projects.length" class="text-sm text-muted">Пока пусто.</div>
+      <div v-if="!store.snap.projects.length" class="flex flex-col items-start gap-3">
+        <span class="icon-well"><FolderKanban :size="15" /></span>
+        <p class="text-sm text-muted">{{ t("dash.empty") }}</p>
+        <RouterLink to="/projects" class="btn-ghost btn-chip rounded-lg px-4 py-2 text-sm">
+          {{ t("nav.projects") }}
+        </RouterLink>
+      </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <button
           v-for="p in store.snap.projects.slice(0, 6)"
@@ -255,7 +258,13 @@ function onProjectMenu(e: MouseEvent, p: ProjectInfo) {
         >
           <div class="font-medium">{{ p.name }}</div>
           <div class="mt-1 truncate text-xs text-muted">{{ p.url.replace("http://", "") }}</div>
-          <div class="mt-3 inline-flex rounded-md bg-lift px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted">{{ p.kind }}</div>
+          <div class="mt-3 flex flex-wrap items-center gap-1.5">
+            <span v-if="tunnelFor(p)" class="inline-flex items-center gap-1 rounded-md bg-warn/15 px-2 py-0.5 text-[10px] text-warn">
+              <Globe :size="10" />
+              {{ tunnelFor(p)?.url ? t("share.public") : t("share.opening") }}
+            </span>
+            <span class="inline-flex rounded-md bg-lift px-2 py-0.5 text-[10px] tracking-wider text-muted">{{ p.kind }}</span>
+          </div>
         </button>
       </div>
     </section>

@@ -16,8 +16,22 @@ pub struct PhpExtension {
     pub kind: String,
 }
 
-pub fn apply_php(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
-    let php_dir = unix(&paths.php_dir(cfg));
+pub const SITE_PHP_PORT_BASE: u16 = 9200;
+
+/// Per-project PHP overrides → dedicated php-cgi ports (nginx / Apache proxy).
+pub fn site_php_ports(paths: &Paths, cfg: &LaxConfig) -> Vec<(String, u16)> {
+    let overrides = crate::projects::site_php_map(paths);
+    let mut vers: Vec<String> = overrides.values().cloned().collect();
+    vers.sort();
+    vers.dedup();
+    vers.retain(|v| v != &cfg.php_version);
+    vers.into_iter()
+        .enumerate()
+        .map(|(i, v)| (v, SITE_PHP_PORT_BASE + i as u16))
+        .collect()
+}
+
+pub fn apply_php(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {    let php_dir = unix(&paths.php_dir(cfg));
     let root = unix(&paths.root);
     let tpl = read_tpl(&paths.tpl("fcgid.conf.tpl")).unwrap_or_else(|_| default_fcgid());
     let body = tpl
@@ -257,7 +271,7 @@ pub fn quick_settings(paths: &Paths, cfg: &LaxConfig) -> LaxResult<PhpQuickSetti
 pub fn set_quick_settings(paths: &Paths, cfg: &LaxConfig, patch: &PhpQuickPatch) -> LaxResult<()> {
     let ini = php_ini_path(paths, cfg);
     if !ini.exists() {
-        return Err(LaxError::msg("php.ini не найден"));
+        return Err(LaxError::msg(rust_i18n::t!("php.ini_not_found")));
     }
     let mut text = fs::read_to_string(&ini)?;
     if let Some(on) = patch.display_errors {
@@ -265,13 +279,13 @@ pub fn set_quick_settings(paths: &Paths, cfg: &LaxConfig, patch: &PhpQuickPatch)
     }
     if let Some(limit) = patch.memory_limit.as_deref() {
         if !valid_ini_size(limit) {
-            return Err(LaxError::msg("некорректный memory_limit"));
+            return Err(LaxError::msg(rust_i18n::t!("php.bad_memory")));
         }
         text = set_ini_value(&text, "memory_limit", limit.trim());
     }
     if let Some(upload) = patch.upload_max_filesize.as_deref() {
         if !valid_ini_size(upload) {
-            return Err(LaxError::msg("некорректный upload_max_filesize"));
+            return Err(LaxError::msg(rust_i18n::t!("php.bad_upload")));
         }
         let upload = upload.trim();
         text = set_ini_value(&text, "upload_max_filesize", upload);
@@ -282,9 +296,7 @@ pub fn set_quick_settings(paths: &Paths, cfg: &LaxConfig, patch: &PhpQuickPatch)
     }
     if let Some(on) = patch.xdebug {
         if on && !xdebug_dll_exists(paths, cfg) && !xdebug_enabled(&text) {
-            return Err(LaxError::msg(
-                "нет php_xdebug в ext/ этой версии PHP — положи dll и включи снова",
-            ));
+            return Err(LaxError::msg(rust_i18n::t!("php.xdebug_missing")));
         }
         text = set_xdebug_ext(&text, on);
         if on {

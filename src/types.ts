@@ -18,6 +18,8 @@ export interface LaxConfig {
   startWeb: boolean;
   startMailpit: boolean;
   startDbGate: boolean;
+  language: string;
+  windowMode: string;
 }
 
 export interface ServiceInfo {
@@ -42,6 +44,7 @@ export interface ProjectInfo {
   hasComposer: boolean;
   hasNodeModules: boolean;
   hasVendor: boolean;
+  phpVersion: string | null;
 }
 
 export interface PhpExtension {
@@ -71,6 +74,11 @@ export interface PortConflict {
   port: number;
   pid: number;
   process: string;
+}
+
+export interface TunnelInfo {
+  path: string;
+  url: string | null;
 }
 
 export interface UpdateInfo {
@@ -103,4 +111,6 @@ export interface Snapshot {
   issuesUrl: string;
   feedbackUrl: string;
   update: UpdateInfo | null;
+  tunnels: TunnelInfo[];
+  cloudflaredAvailable: boolean;
 }

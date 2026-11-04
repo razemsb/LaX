@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { reactive, watch } from "vue";
+import { computed, reactive, watch } from "vue";
+import { Maximize2, Minimize2, MoveDiagonal } from "lucide-vue-next";
 import { useAppStore } from "@/stores/app";
 import type { LaxConfig } from "@/types";
 import { THEMES } from "@/lib/themes";
+import { LOCALES, t, type Locale } from "@/lib/i18n";
 
 const store = useAppStore();
+const windowModes = computed(() => [
+  { id: "mini", icon: Minimize2, label: t("mode.mini") },
+  { id: "medium", icon: MoveDiagonal, label: t("mode.medium") },
+  { id: "large", icon: Maximize2, label: t("mode.large") },
+]);
 const form = reactive<LaxConfig>({
   documentRoot: "www",
   tld: "localhost",
@@ -25,6 +32,8 @@ const form = reactive<LaxConfig>({
   startWeb: true,
   startMailpit: true,
   startDbGate: false,
+  language: "ru",
+  windowMode: "medium",
 });
 
 watch(
@@ -50,35 +59,79 @@ async function pickDbAdmin(id: "phpmyadmin" | "dbgate") {
   }
   await store.setDbAdmin(id);
 }
+
+function pickLocale(id: Locale) {
+  store.setLanguage(id);
+}
 </script>
 
 <template>
   <div v-if="store.snap" class="grid max-w-4xl grid-cols-1 gap-5 xl:grid-cols-2 xl:gap-6">
     <section class="surface space-y-4 p-4 sm:p-5 xl:col-span-2">
       <div>
-        <div class="eyebrow">тема</div>
-        <p class="mt-1 text-xs text-muted">меняется сразу, стек не трогает</p>
+        <div class="eyebrow">{{ t("set.language") }}</div>
+        <p class="mt-1 text-xs text-muted">{{ t("set.languageHint") }}</p>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          v-for="l in LOCALES"
+          :key="l.id"
+          type="button"
+          class="theme-card"
+          :aria-pressed="(store.snap.config.language || 'ru') === l.id"
+          @click="pickLocale(l.id)"
+        >
+          <div class="text-sm">{{ l.native }}</div>
+          <div class="mt-1 truncate text-[11px] text-muted">{{ l.label }}</div>
+        </button>
+      </div>
+    </section>
+
+    <section class="surface space-y-4 p-4 sm:p-5 xl:col-span-2">
+      <div>
+        <div class="eyebrow">{{ t("set.window") }}</div>
+        <p class="mt-1 text-xs text-muted">{{ t("set.windowHint") }}</p>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          v-for="m in windowModes"
+          :key="m.id"
+          type="button"
+          class="theme-card flex items-center gap-3"
+          :aria-pressed="(store.snap.config.windowMode || 'medium') === m.id"
+          @click="store.setWindowMode(m.id)"
+        >
+          <span class="icon-well shrink-0"><component :is="m.icon" :size="15" /></span>
+          <span class="min-w-0 truncate text-sm">{{ m.label }}</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="surface space-y-4 p-4 sm:p-5 xl:col-span-2">
+      <div>
+        <div class="eyebrow">{{ t("set.theme") }}</div>
+        <p class="mt-1 text-xs text-muted">{{ t("set.themeHint") }}</p>
       </div>
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <button
-          v-for="t in THEMES"
-          :key="t.id"
+          v-for="th in THEMES"
+          :key="th.id"
           type="button"
           class="theme-card"
-          :aria-pressed="(store.snap.config.theme || 'noir') === t.id"
-          @click="store.setTheme(t.id)"
+          :aria-pressed="(store.snap.config.theme || 'noir') === th.id"
+          @click="store.setTheme(th.id)"
         >
           <div class="mb-3 flex h-9 overflow-hidden rounded-lg">
-            <span class="flex-1" :style="{ background: t.swatch[0] }" />
-            <span class="flex-1" :style="{ background: t.swatch[1] }" />
-            <span class="w-7" :style="{ background: t.swatch[2] }" />
+            <span class="flex-1" :style="{ background: th.swatch[0] }" />
+            <span class="flex-1" :style="{ background: th.swatch[1] }" />
+            <span class="w-7" :style="{ background: th.swatch[2] }" />
           </div>
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <div class="truncate text-sm">{{ t.name }}</div>
-              <div class="truncate text-[11px] text-muted">{{ t.hint }}</div>
+              <div class="truncate text-sm">{{ th.name }}</div>
+              <div class="truncate text-[11px] text-muted">{{ t(`theme.${th.id}`) }}</div>
             </div>
-            <span v-if="t.experimental" class="shrink-0 rounded-md bg-lift px-1.5 py-0.5 text-[10px] text-muted">эксп.</span>
+            <span v-if="th.experimental" class="shrink-0 rounded-md bg-lift px-1.5 py-0.5 text-[10px] text-muted">{{ t("set.experimental") }}</span>
           </div>
         </button>
       </div>
@@ -86,18 +139,34 @@ async function pickDbAdmin(id: "phpmyadmin" | "dbgate") {
 
     <form class="surface space-y-5 p-4 sm:p-5" @submit.prevent="save">
       <label class="block">
-        <div class="mb-2 eyebrow">корень сайтов</div>
+        <div class="mb-2 eyebrow">{{ t("set.docRoot") }}</div>
         <input v-model="form.documentRoot" class="field" />
       </label>
       <label class="block">
-        <div class="mb-2 eyebrow">веб-сервер</div>
+        <div class="mb-2 eyebrow">{{ t("set.webServer") }}</div>
         <select v-model="form.webServer" class="field">
           <option value="apache">Apache</option>
           <option value="nginx">Nginx</option>
         </select>
       </label>
       <div>
-        <div class="mb-2 eyebrow">панель баз</div>
+        <label class="flex items-center gap-2 text-sm">
+          <input v-model="form.autoVhost" type="checkbox" class="accent-[var(--accent)]" />
+          {{ t("set.autoVhost") }}
+        </label>
+        <p class="mt-1 text-[11px] text-muted">{{ t("set.autoVhostHint") }}</p>
+        <div v-if="form.autoVhost" class="mt-3 space-y-2">
+          <label class="block">
+            <div class="mb-2 eyebrow">{{ t("set.tld") }}</div>
+            <input v-model="form.tld" placeholder="test" class="field" />
+          </label>
+          <p v-if="!store.snap.hostsWritable" class="text-[11px] text-accent">
+            {{ t("set.autoVhostHosts") }}
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="mb-2 eyebrow">{{ t("set.dbPanel") }}</div>
         <div class="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -106,7 +175,7 @@ async function pickDbAdmin(id: "phpmyadmin" | "dbgate") {
             @click="pickDbAdmin('phpmyadmin')"
           >
             <div class="text-sm">phpMyAdmin</div>
-            <div class="mt-1 text-[11px] text-muted">в zip, через Apache / Nginx</div>
+            <div class="mt-1 text-[11px] text-muted">{{ t("set.pmaHint") }}</div>
           </button>
           <button
             type="button"
@@ -117,21 +186,21 @@ async function pickDbAdmin(id: "phpmyadmin" | "dbgate") {
           >
             <div class="text-sm">DbGate</div>
             <div class="mt-1 text-[11px] text-muted">
-              {{ store.snap.dbgateAvailable ? "веб, порт 8030" : "не в zip · скачать ~350 МБ" }}
+              {{ store.snap.dbgateAvailable ? t("set.dbgateHint") : t("set.dbgateMissing") }}
             </div>
           </button>
         </div>
         <p class="mt-2 text-[11px] text-muted">
-          phpMyAdmin едет в релизе. DbGate ставится кнопкой выше, один раз, после установки или обновления.
+          {{ t("set.dbNote") }}
         </p>
         <button
           v-if="!store.snap.dbgateAvailable"
           type="button"
-          class="btn-accent mt-3 rounded-lg px-4 py-2 text-sm font-medium"
+          class="btn-primary mt-3 rounded-lg px-4 py-2 text-sm font-medium"
           :disabled="store.busy"
           @click="store.installDbGate()"
         >
-          Скачать DbGate
+          {{ t("set.downloadDbgate") }}
         </button>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -140,12 +209,12 @@ async function pickDbAdmin(id: "phpmyadmin" | "dbgate") {
         <label class="text-xs text-muted">MySQL<input v-model.number="form.mysqlPort" type="number" class="field mt-1" /></label>
       </div>
       <div>
-        <div class="mb-2 eyebrow">кнопка «Запустить все»</div>
-        <p class="mb-3 text-[11px] text-muted">только отмеченные службы. phpMyAdmin идёт через веб-сервер, отдельный процесс не нужен.</p>
+        <div class="mb-2 eyebrow">{{ t("set.startAllBtn") }}</div>
+        <p class="mb-3 text-[11px] text-muted">{{ t("set.startAllHint") }}</p>
         <div class="space-y-2">
           <label class="flex items-center gap-2 text-sm">
             <input v-model="form.startWeb" type="checkbox" class="accent-[var(--accent)]" />
-            Веб-сервер ({{ form.webServer === "nginx" ? "Nginx" : "Apache" }} + PHP)
+            {{ t("set.webPlusPhp", { x: form.webServer === "nginx" ? "Nginx" : "Apache" }) }}
           </label>
           <label class="flex items-center gap-2 text-sm">
             <input v-model="form.mysqlEnabled" type="checkbox" class="accent-[var(--accent)]" />
@@ -166,18 +235,18 @@ async function pickDbAdmin(id: "phpmyadmin" | "dbgate") {
           </label>
         </div>
         <p v-if="form.dbAdmin !== 'dbgate' && form.startDbGate" class="mt-2 text-[11px] text-muted">
-          Панель баз — phpMyAdmin, но DbGate всё равно поднимется. Сними галку, если не нужен.
+          {{ t("set.phpmyadminButDbgate") }}
         </p>
       </div>
       <label class="flex items-center gap-2 text-sm">
         <input v-model="form.autoStart" type="checkbox" class="accent-[var(--accent)]" />
-        При открытии LaX сразу жать «Запустить все»
+        {{ t("set.autoStart") }}
       </label>
-      <button class="btn-accent rounded-lg px-4 py-2 text-sm font-medium" :disabled="store.busy">Сохранить</button>
+      <button class="btn-primary rounded-lg px-4 py-2 text-sm font-medium" :disabled="store.busy">{{ t("set.save") }}</button>
     </form>
 
     <div class="space-y-3">
-      <div class="eyebrow">конфиги</div>
+      <div class="eyebrow">{{ t("set.configs") }}</div>
       <div class="surface divide-y divide-line overflow-hidden">
         <button type="button" class="flex w-full items-center justify-between px-5 py-3.5 text-left text-sm hover:bg-lift" @click="store.openIni('php')">
           php.ini <span class="text-xs text-muted">PHP</span>
@@ -197,21 +266,21 @@ async function pickDbAdmin(id: "phpmyadmin" | "dbgate") {
     <section class="surface space-y-4 p-4 sm:p-5 xl:col-span-2">
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div class="eyebrow">о программе</div>
+          <div class="eyebrow">{{ t("set.about") }}</div>
           <div class="mt-1 text-lg font-medium">LaX v{{ store.snap.appVersion }}</div>
-          <p class="mt-1 text-sm text-muted">портативный локальный стек</p>
+          <p class="mt-1 text-sm text-muted">{{ t("set.tagline") }}</p>
         </div>
-        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" :disabled="store.busy" @click="store.checkUpdate()">
-          Проверить обновления
+        <button class="btn-primary rounded-lg px-4 py-2 text-sm" :disabled="store.busy" @click="store.checkUpdate()">
+          {{ t("set.checkUpdates") }}
         </button>
       </div>
       <p v-if="store.snap.update" class="text-sm">
-        Есть v{{ store.snap.update.version }}. Можно поставить сверху, www и базы не затрутся.
+        {{ t("set.updateFound", { version: store.snap.update.version }) }}
       </p>
       <div class="flex flex-wrap gap-2">
-        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.repoUrl)">репозиторий</button>
-        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.issuesUrl)">задачи</button>
-        <button class="btn-accent rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.feedbackUrl)">фидбек / баг</button>
+        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.repoUrl)">{{ t("set.repo") }}</button>
+        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.issuesUrl)">{{ t("set.issues") }}</button>
+        <button class="btn-ghost rounded-lg px-4 py-2 text-sm" @click="store.openUrl(store.snap.feedbackUrl)">{{ t("app.feedback") }}</button>
       </div>
     </section>
   </div>

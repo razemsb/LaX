@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { X } from "lucide-vue-next";
+import { t } from "@/lib/i18n";
 
 withDefaults(
   defineProps<{
@@ -26,7 +27,7 @@ const emit = defineEmits<{ close: [] }>();
       <button
         type="button"
         class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-lift hover:text-text"
-        title="закрыть"
+        :title="t('banner.close')"
         @click="emit('close')"
       >
         <X :size="14" />

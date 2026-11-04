@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -24,11 +25,53 @@ pub struct ProjectInfo {
     pub has_composer: bool,
     pub has_node_modules: bool,
     pub has_vendor: bool,
+    pub php_version: Option<String>,
+}
+
+pub fn site_php_path(paths: &Paths) -> PathBuf {
+    paths.root.join("usr").join("site_php.toml")
+}
+
+pub fn site_php_map(paths: &Paths) -> HashMap<String, String> {
+    let raw = fs::read_to_string(site_php_path(paths)).unwrap_or_default();
+    toml::from_str(&raw).unwrap_or_default()
+}
+
+pub fn set_site_php(paths: &Paths, slug: &str, version: Option<&str>) -> LaxResult<()> {
+    let mut map = site_php_map(paths);
+    match version {
+        None => {
+            map.remove(slug);
+        }
+        Some(v) => {
+            if v != "default" {
+                let dir = paths.root.join("bin").join("php").join(v);
+                if !dir.is_dir() {
+                    return Err(LaxError::msg(rust_i18n::t!("php.bad_version", version = v)));
+                }
+                map.insert(slug.to_string(), v.to_string());
+            } else {
+                map.remove(slug);
+            }
+        }
+    }
+    let body = toml::to_string_pretty(&map).map_err(|e| LaxError::msg(e.to_string()))?;
+    write_silent(&site_php_path(paths), &body)
+}
+
+fn write_silent(path: &Path, body: &str) -> LaxResult<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let mut f = fs::File::create(path)?;
+    f.write_all(body.as_bytes())?;
+    Ok(())
 }
 
 pub fn list_projects(paths: &Paths, cfg: &LaxConfig) -> LaxResult<Vec<ProjectInfo>> {
     let www = paths.www(cfg);
     fs::create_dir_all(&www)?;
+    let site_php = site_php_map(paths);
     let mut items = Vec::new();
     let rd = fs::read_dir(&www)?;
     for ent in rd.flatten() {
@@ -40,7 +83,6 @@ pub fn list_projects(paths: &Paths, cfg: &LaxConfig) -> LaxResult<Vec<ProjectInf
         if name.starts_with('.') || is_stack_dir(&name) {
             continue;
         }
-        let has_public = document_root_for(&path) != path;
         let port = if cfg.web_server == "nginx" {
             cfg.nginx_port
         } else {
@@ -51,12 +93,23 @@ pub fn list_projects(paths: &Paths, cfg: &LaxConfig) -> LaxResult<Vec<ProjectInf
         } else {
             format!(":{port}")
         };
-        let suffix = if has_public { format!("{name}/public/") } else { format!("{name}/") };
-        let url = format!("http://localhost{hostport}/{suffix}");
         let info = inspect(&path);
+        let has_public = document_root_for(&path) != path;
+        let php_version = site_php.get(&name).cloned();
+        let (url, localhost_url) = if cfg.auto_vhost {
+            let domain = format!("{name}.{}", cfg.tld.trim_start_matches('.'));
+            (
+                format!("http://{domain}{hostport}/"),
+                format!("http://localhost{hostport}/{name}/"),
+            )
+        } else {
+            let suffix = if has_public { format!("{name}/public/") } else { format!("{name}/") };
+            let u = format!("http://localhost{hostport}/{suffix}");
+            (u.clone(), u)
+        };
         items.push(ProjectInfo {
-            url: url.clone(),
-            localhost_url: url,
+            url,
+            localhost_url,
             name,
             path: path.to_string_lossy().into_owned(),
             has_public,
@@ -66,6 +119,7 @@ pub fn list_projects(paths: &Paths, cfg: &LaxConfig) -> LaxResult<Vec<ProjectInf
             has_composer: info.has_composer,
             has_node_modules: info.has_node_modules,
             has_vendor: info.has_vendor,
+            php_version,
         });
     }
     items.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -89,7 +143,7 @@ pub fn reserve_slug(paths: &Paths, cfg: &LaxConfig, name: &str) -> LaxResult<Str
     let slug = sanitize(name)?;
     let dir = paths.www(cfg).join(&slug);
     if dir.exists() {
-        return Err(LaxError::msg(format!("проект '{slug}' уже есть")));
+        return Err(LaxError::msg(rust_i18n::t!("proj.exists", slug = slug)));
     }
     Ok(slug)
 }
@@ -142,19 +196,17 @@ pub fn start_cli_scaffold(paths: &Paths, cfg: &LaxConfig, name: &str, kind: &str
         }
         "vite" => {
             if discover::node_bin_dir(&paths.root).is_none() {
-                return Err(LaxError::msg(
-                    "Node не найден в bin/node. Запусти npm run fetch-tools",
-                ));
+                return Err(LaxError::msg(rust_i18n::t!("proj.node_missing_fetch")));
             }
             format!("npm create --yes vite@latest {slug} -- --template vue")
         }
-        other => return Err(LaxError::msg(format!("неизвестный шаблон: {other}"))),
+        other => return Err(LaxError::msg(rust_i18n::t!("proj.unknown_template", other = other))),
     };
     platform::open_terminal(&www, Some(&line), Some(prefix.as_str()))
         .map_err(LaxError::msg)?;
     let hint = match kind {
-        "laravel" => format!("Laravel: в терминале composer create-project → {slug}"),
-        "vite" => format!("Vite + Vue: в терминале npm create → {slug}"),
+        "laravel" => rust_i18n::t!("proj.laravel_scaffold", slug = slug).into_owned(),
+        "vite" => rust_i18n::t!("proj.vite_scaffold", slug = slug).into_owned(),
         _ => slug.clone(),
     };
     Ok(hint)
@@ -163,7 +215,7 @@ pub fn start_cli_scaffold(paths: &Paths, cfg: &LaxConfig, name: &str, kind: &str
 pub fn scaffold_wordpress(root: &Path, www: &Path, slug: &str) -> LaxResult<()> {
     let dest = www.join(slug);
     if dest.exists() {
-        return Err(LaxError::msg(format!("проект '{slug}' уже есть")));
+        return Err(LaxError::msg(rust_i18n::t!("proj.exists", slug = slug)));
     }
     fs::create_dir_all(root.join("tmp"))?;
     let zip_path = root.join("tmp").join("wordpress-latest.zip");
@@ -175,7 +227,7 @@ pub fn scaffold_wordpress(root: &Path, www: &Path, slug: &str) -> LaxResult<()> 
     }
     if !dest.join("wp-config-sample.php").exists() && !dest.join("index.php").exists() {
         let _ = fs::remove_dir_all(&dest);
-        return Err(LaxError::msg("архив WordPress пустой или неожиданный"));
+        return Err(LaxError::msg(rust_i18n::t!("proj.wp_archive")));
     }
     Ok(())
 }
@@ -196,7 +248,7 @@ fn download_wordpress(dest: &Path) -> LaxResult<()> {
     let resp = agent
         .get("https://wordpress.org/latest.zip")
         .call()
-        .map_err(|e| LaxError::msg(format!("скачивание WordPress: {e}")))?;
+        .map_err(|e| LaxError::msg(rust_i18n::t!("proj.wp_download_failed", e = e.to_string())))?;
     let tmp = dest.with_extension("part");
     let mut file = fs::File::create(&tmp)?;
     io::copy(&mut resp.into_reader(), &mut file)?;
@@ -245,7 +297,7 @@ fn listed(paths: &Paths, cfg: &LaxConfig, slug: &str) -> LaxResult<ProjectInfo> 
     let list = list_projects(paths, cfg)?;
     list.into_iter()
         .find(|p| p.name == slug)
-        .ok_or_else(|| LaxError::msg("проект создан, но не попал в список"))
+        .ok_or_else(|| LaxError::msg(rust_i18n::t!("proj.not_listed")))
 }
 
 fn sanitize(name: &str) -> LaxResult<String> {

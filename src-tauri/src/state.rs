@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -30,14 +31,16 @@ impl AppState {
         let paths = Paths::detect();
         let config = LaxConfig::default();
         let _ = config::ensure_runtime_dirs(&paths, &config);
+        crate::sync_locale(&config.language);
         Self {
             inner: Arc::new(Mutex::new(Orchestrator {
                 paths,
                 config,
                 procs: ProcessTable::default(),
-                last_message: Some("Started with default config".into()),
+                last_message: Some(rust_i18n::t!("msg.default_config").into_owned()),
                 port_conflict: None,
                 update: None,
+                tunnels: HashMap::new(),
             })),
         }
     }
@@ -50,6 +53,7 @@ pub struct Orchestrator {
     pub last_message: Option<String>,
     pub port_conflict: Option<PortConflict>,
     pub update: Option<crate::update::UpdateInfo>,
+    pub tunnels: HashMap<String, TunnelInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -74,6 +78,13 @@ pub struct PortConflict {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TunnelInfo {
+    pub path: String,
+    pub url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Snapshot {
     pub root: String,
     pub config: LaxConfig,
@@ -94,12 +105,15 @@ pub struct Snapshot {
     pub issues_url: String,
     pub feedback_url: String,
     pub update: Option<crate::update::UpdateInfo>,
+    pub tunnels: Vec<TunnelInfo>,
+    pub cloudflared_available: bool,
 }
 
 impl Orchestrator {
     pub fn load() -> LaxResult<Self> {
         let paths = Paths::detect();
         let mut config = config::load_config(&paths)?;
+        crate::sync_locale(&config.language);
         reconcile_versions(&paths, &mut config);
         config::ensure_runtime_dirs(&paths, &config)?;
         let _ = crate::portable::rebase(&paths, &config);
@@ -111,6 +125,7 @@ impl Orchestrator {
             last_message: None,
             port_conflict: None,
             update: None,
+            tunnels: HashMap::new(),
         })
     }
 
@@ -136,6 +151,8 @@ impl Orchestrator {
             issues_url: crate::update::ISSUES_URL.to_string(),
             feedback_url: crate::update::FEEDBACK_URL.to_string(),
             update: self.update.clone(),
+            tunnels: self.tunnels.values().cloned().collect(),
+            cloudflared_available: crate::tunnel::available(&self.paths),
         }
     }
 
@@ -232,7 +249,7 @@ impl Orchestrator {
             None => PortConflict {
                 port,
                 pid: 0,
-                process: "неизвестно".into(),
+                process: rust_i18n::t!("state.unknown_process").into_owned(),
             },
         });
     }
@@ -240,13 +257,10 @@ impl Orchestrator {
     fn fail_port(&mut self, port: u16) -> LaxError {
         self.remember_conflict(port);
         match &self.port_conflict {
-            Some(c) if c.pid != 0 => LaxError::msg(format!(
-                "порт {port} занят: {} (PID {})",
-                c.process, c.pid
-            )),
-            _ => LaxError::msg(format!(
-                "порт {port} не открылся. Смотри логи Apache/Nginx."
-            )),
+            Some(c) if c.pid != 0 => LaxError::msg(
+                rust_i18n::t!("state.port_taken", port = port, process = c.process.clone(), pid = c.pid),
+            ),
+            _ => LaxError::msg(rust_i18n::t!("state.port_not_open", port = port)),
         }
     }
 
@@ -256,8 +270,11 @@ impl Orchestrator {
         php::apply_php(&self.paths, &self.config)?;
         let projects = projects::list_projects(&self.paths, &self.config)?;
         vhosts::regenerate(&self.paths, &self.config, &projects)?;
-        let _ = hosts::sync_hosts(&projects, &self.config.tld, false);
+        let _ = hosts::sync_hosts(&projects, &self.config.tld, self.config.auto_vhost);
         self.last_message = None;
+        if port_open(self.web_port()) {
+            self.start_web()?;
+        }
         Ok(())
     }
 
@@ -286,8 +303,25 @@ impl Orchestrator {
         services::stop_mariadb(&mut self.procs);
         services::stop_mailpit(&mut self.procs);
         services::stop_dbgate(&mut self.procs);
+        let keys: Vec<String> = self.tunnels.keys().cloned().collect();
+        for key in &keys {
+            crate::tunnel::stop(&mut self.procs, key);
+        }
+        self.tunnels.clear();
         self.procs.stop_all();
         self.port_conflict = None;
+    }
+
+    pub fn tunnel_ready(&mut self, key: &str, url: String) {
+        let suffix = {
+            let dir = self.paths.www(&self.config).join(key);
+            let has_public = crate::projects::document_root_for(&dir) != dir;
+            format!("/{key}{}", if has_public { "/public/" } else { "/" })
+        };
+        if let Some(t) = self.tunnels.get_mut(key) {
+            t.url = Some(format!("{url}{suffix}"));
+            self.last_message = None;
+        }
     }
 
     fn start_web(&mut self) -> LaxResult<()> {
@@ -354,22 +388,20 @@ impl Orchestrator {
             "mailpit" => {
                 if services::mailpit_bin(&self.paths).is_none() {
                     return Err(LaxError::msg(if cfg!(unix) {
-                        "Mailpit не найден. Запусти bash scripts/fetch-linux-stack.sh — бинарник появится в bin/mailpit"
+                        rust_i18n::t!("state.mailpit_missing_linux")
                     } else {
-                        "Mailpit не найден. Запусти scripts/fetch-tools.ps1 — бинарник появится в bin/mailpit"
+                        rust_i18n::t!("state.mailpit_missing_win")
                     }));
                 }
                 services::start_mailpit(&mut self.procs, &self.paths)?;
             }
             "dbgate" => {
                 if services::dbgate_script(&self.paths).is_none() {
-                    return Err(LaxError::msg(
-                        "DbGate не установлен. Настройки → панель баз → Скачать DbGate",
-                    ));
+                    return Err(LaxError::msg(rust_i18n::t!("state.dbgate_not_installed")));
                 }
                 services::start_dbgate(&mut self.procs, &self.paths, &self.config)?;
             }
-            other => return Err(LaxError::msg(format!("unknown service {other}"))),
+            other => return Err(LaxError::msg(rust_i18n::t!("err.unknown_service", id = other))),
         }
         Ok(())
     }
@@ -387,7 +419,7 @@ impl Orchestrator {
             }
             "mailpit" => services::stop_mailpit(&mut self.procs),
             "dbgate" => services::stop_dbgate(&mut self.procs),
-            other => return Err(LaxError::msg(format!("unknown service {other}"))),
+            other => return Err(LaxError::msg(rust_i18n::t!("err.unknown_service", id = other))),
         }
         Ok(())
     }
@@ -426,7 +458,7 @@ impl Orchestrator {
 
     pub fn switch_web_port(&mut self, port: u16) -> LaxResult<()> {
         if port == 0 {
-            return Err(LaxError::msg("некорректный порт"));
+            return Err(LaxError::msg(rust_i18n::t!("err.invalid_port")));
         }
         self.config.apache_port = port;
         self.config.nginx_port = port;
@@ -460,7 +492,7 @@ impl Orchestrator {
             "noir" | "paper" | "midnight" | "quartz" | "glass" | "obsidian"
         );
         if !ok {
-            return Err(LaxError::msg("неизвестная тема"));
+            return Err(LaxError::msg(rust_i18n::t!("err.unknown_theme")));
         }
         self.config.theme = theme;
         config::save_config(&self.paths, &self.config)?;
@@ -470,6 +502,19 @@ impl Orchestrator {
     pub fn set_db_admin(&mut self, id: &str) -> LaxResult<()> {
         self.config.db_admin = config::normalize_db_admin(id);
         self.config.start_dbgate = self.config.db_admin == "dbgate";
+        config::save_config(&self.paths, &self.config)?;
+        Ok(())
+    }
+
+    pub fn set_language(&mut self, language: &str) -> LaxResult<()> {
+        self.config.language = config::normalize_language(language);
+        crate::sync_locale(&self.config.language);
+        config::save_config(&self.paths, &self.config)?;
+        Ok(())
+    }
+
+    pub fn set_window_mode(&mut self, mode: &str) -> LaxResult<()> {
+        self.config.window_mode = config::normalize_window_mode(mode);
         config::save_config(&self.paths, &self.config)?;
         Ok(())
     }
@@ -502,9 +547,9 @@ fn unix_port_allowed(port: u16) -> Result<(), String> {
     use std::net::TcpListener;
     match TcpListener::bind(("127.0.0.1", port)) {
         Ok(_) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => Err(format!(
-            "порт {port} на Linux недоступен без root/capabilities. Поставь 8080 в Настройках."
-        )),
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => Err(
+            rust_i18n::t!("state.linux_port_needs_root", port = port),
+        ),
         Err(_) => Ok(()),
     }
 }

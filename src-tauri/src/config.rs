@@ -47,6 +47,10 @@ pub struct LaxConfig {
     pub start_mailpit: bool,
     #[serde(default, alias = "start_dbgate")]
     pub start_dbgate: bool,
+    #[serde(default = "default_language", alias = "language")]
+    pub language: String,
+    #[serde(default = "default_window_mode", alias = "window_mode")]
+    pub window_mode: String,
 }
 
 fn default_mysql_enabled() -> bool {
@@ -65,10 +69,45 @@ fn default_db_admin() -> String {
     "phpmyadmin".into()
 }
 
+fn default_language() -> String {
+    "ru".into()
+}
+
+fn default_window_mode() -> String {
+    "medium".into()
+}
+
+pub fn normalize_language(id: &str) -> String {
+    match id.trim().to_ascii_lowercase().as_str() {
+        "en" | "eng" | "english" => "en".into(),
+        "zh" | "cn" | "zh-cn" | "chinese" | "mandarin" => "zh".into(),
+        _ => "ru".into(),
+    }
+}
+
+pub fn normalize_window_mode(id: &str) -> String {
+    match id.trim().to_ascii_lowercase().as_str() {
+        "mini" | "small" => "mini".into(),
+        "large" | "big" => "large".into(),
+        _ => "medium".into(),
+    }
+}
+
 pub fn normalize_db_admin(id: &str) -> String {
     match id.trim().to_ascii_lowercase().as_str() {
         "dbgate" | "adminer" => "dbgate".into(),
         _ => "phpmyadmin".into(),
+    }
+}
+
+pub fn normalize_tld(tld: &str) -> String {
+    let t = tld.trim().trim_start_matches('.').to_ascii_lowercase();
+    if t.is_empty() {
+        "test".into()
+    } else {
+        t.chars()
+            .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '.' { c } else { '-' })
+            .collect()
     }
 }
 
@@ -146,6 +185,8 @@ impl Default for LaxConfig {
             start_web: true,
             start_mailpit: true,
             start_dbgate: false,
+            language: default_language(),
+            window_mode: default_window_mode(),
         }
     }
 }
@@ -209,6 +250,7 @@ pub fn load_config(paths: &Paths) -> LaxResult<LaxConfig> {
     match toml::from_str::<LaxConfig>(&raw) {
         Ok(mut cfg) => {
             cfg.db_admin = normalize_db_admin(&cfg.db_admin);
+            cfg.tld = normalize_tld(&cfg.tld);
             if !raw.contains("startDbgate") && !raw.contains("start_dbgate") {
                 cfg.start_dbgate = cfg.db_admin == "dbgate";
             }
@@ -225,7 +267,9 @@ pub fn save_config(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
     if let Some(parent) = paths.config_file.parent() {
         fs::create_dir_all(parent)?;
     }
-    let raw = toml::to_string_pretty(cfg).map_err(|e| LaxError::msg(e.to_string()))?;
+    let mut cfg = cfg.clone();
+    cfg.tld = normalize_tld(&cfg.tld);
+    let raw = toml::to_string_pretty(&cfg).map_err(|e| LaxError::msg(e.to_string()))?;
     fs::write(&paths.config_file, raw)?;
     Ok(())
 }

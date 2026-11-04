@@ -30,24 +30,23 @@ pub fn start_apache(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) ->
     if !httpd.exists() {
         #[cfg(unix)]
         {
-            return Err(LaxError::msg(
-                "Apache на Linux не входит в портативный стек (нет httpd). Включи Nginx — он уже в bin/nginx. Скрипт: scripts/fetch-linux-stack.sh",
-            ));
+            return Err(LaxError::msg(rust_i18n::t!("svc.apache_linux")));
         }
         #[cfg(not(unix))]
         {
-            return Err(LaxError::msg(format!("binary not found: {}", httpd.display())));
+            return Err(LaxError::msg(
+                rust_i18n::t!("svc.binary_missing", path = httpd.display().to_string()),
+            ));
         }
     }
     let (code, out) = run_capture(&httpd, &["-t"], &dir)?;
     if code != 0 {
-        return Err(LaxError::msg(format!("Apache config test failed:\n{out}")));
+        return Err(LaxError::msg(rust_i18n::t!("svc.apache_config_test", out = out)));
     }
     if port_open(cfg.apache_port) {
-        return Err(LaxError::msg(format!(
-            "port {} is already in use — stop Laragon or the other web server first",
-            cfg.apache_port
-        )));
+        return Err(LaxError::msg(
+            rust_i18n::t!("svc.port_in_use_web", port = cfg.apache_port),
+        ));
     }
     table.spawn("apache", &httpd, &[], &dir, &[])
 }
@@ -62,16 +61,14 @@ pub fn start_nginx(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> 
     let dir = paths.nginx_dir(cfg);
     let nginx = crate::platform::bin_path(&dir, "nginx");
     if !nginx.exists() {
-        return Err(LaxError::msg(format!(
-            "nginx не найден: {}. На Linux: bash scripts/fetch-linux-stack.sh",
-            nginx.display()
-        )));
+        return Err(LaxError::msg(
+            rust_i18n::t!("svc.nginx_missing", dir = nginx.display()),
+        ));
     }
     if port_open(cfg.nginx_port) {
-        return Err(LaxError::msg(format!(
-            "port {} is already in use — stop Laragon or Apache first",
-            cfg.nginx_port
-        )));
+        return Err(LaxError::msg(
+            rust_i18n::t!("svc.port_in_use_apache", port = cfg.nginx_port),
+        ));
     }
     #[cfg(unix)]
     {
@@ -112,10 +109,9 @@ pub fn start_mariadb(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -
     let dir = paths.mysql_dir(cfg);
     let mysqld = mysql_server_bin(&dir);
     if !mysqld.exists() {
-        return Err(LaxError::msg(format!(
-            "MariaDB не найден: {}. На Linux: bash scripts/fetch-linux-stack.sh",
-            mysqld.display()
-        )));
+        return Err(LaxError::msg(
+            rust_i18n::t!("svc.mariadb_missing", dir = mysqld.display()),
+        ));
     }
     let ini = if dir.join("my.cnf").is_file() {
         dir.join("my.cnf")
@@ -123,10 +119,9 @@ pub fn start_mariadb(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -
         dir.join("my.ini")
     };
     if port_open(cfg.mysql_port) {
-        return Err(LaxError::msg(format!(
-            "port {} is already in use — stop the other MySQL/MariaDB instance",
-            cfg.mysql_port
-        )));
+        return Err(LaxError::msg(
+            rust_i18n::t!("svc.port_in_use_mysql", port = cfg.mysql_port),
+        ));
     }
     let defaults = format!("--defaults-file={}", unix(&ini));
     let basedir = format!("--basedir={}", unix(&dir));
@@ -198,10 +193,26 @@ pub fn start_php_cgi(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -
         return Ok(());
     }
 
-    Err(LaxError::msg(format!(
-        "PHP CGI/FPM не найден в {}. На Linux: bash scripts/fetch-linux-stack.sh",
-        php_dir.display()
-    )))
+    for (ver, port) in crate::php::site_php_ports(paths, cfg) {
+        let dir = paths.root.join("bin").join("php").join(&ver);
+        let cgi = crate::platform::bin_path(&dir, "php-cgi");
+        if !cgi.exists() {
+            continue;
+        }
+        let phprc = unix(&dir);
+        let bind = format!("127.0.0.1:{port}");
+        table.spawn(
+            &format!("php-cgi-{port}"),
+            &cgi,
+            &["-b", &bind],
+            &dir,
+            &[("PHPRC", phprc)],
+        )?;
+    }
+
+    Err(LaxError::msg(
+        rust_i18n::t!("svc.php_cgi_missing", dir = php_dir.display().to_string()),
+    ))
 }
 
 pub fn stop_php_cgi(table: &mut ProcessTable) {
@@ -210,7 +221,7 @@ pub fn stop_php_cgi(table: &mut ProcessTable) {
 
 pub fn start_mailpit(table: &mut ProcessTable, paths: &Paths) -> LaxResult<()> {
     let Some(bin) = mailpit_bin(paths) else {
-        tracing::warn!("mailpit not found in bin/mailpit — skip");
+        tracing::warn!("{}", rust_i18n::t!("svc.mailpit_missing_skip"));
         return Ok(());
     };
     if port_open(MAILPIT_UI) || port_open(MAILPIT_SMTP) {
@@ -277,16 +288,14 @@ pub fn install_dbgate(paths: &Paths) -> LaxResult<()> {
         return Ok(());
     }
     let Some(node_dir) = crate::discover::node_bin_dir(&paths.root) else {
-        return Err(LaxError::msg(
-            "Node не найден в bin/node. Без него DbGate не ставится.",
-        ));
+        return Err(LaxError::msg(rust_i18n::t!("svc.node_required_dbgate")));
     };
     let node = crate::platform::bin_path(&node_dir, "node");
     if !node.exists() {
-        return Err(LaxError::msg("node не найден рядом с bin/node"));
+        return Err(LaxError::msg(rust_i18n::t!("svc.node_next_to_bin")));
     }
     let Some(npm) = npm_cli(&node_dir) else {
-        return Err(LaxError::msg("npm не найден рядом с портативным Node"));
+        return Err(LaxError::msg(rust_i18n::t!("svc.npm_next_to_node")));
     };
     let dir = paths.root.join("usr/apps/dbgate");
     fs::create_dir_all(&dir)?;
@@ -311,35 +320,33 @@ pub fn install_dbgate(paths: &Paths) -> LaxResult<()> {
     crate::platform::hide_window(&mut cmd);
     let out = cmd
         .output()
-        .map_err(|e| LaxError::msg(format!("не удалось запустить npm: {e}")))?;
+        .map_err(|e| LaxError::msg(rust_i18n::t!("svc.npm_spawn_failed", e = e.to_string())))?;
     if !out.status.success() {
         let err = String::from_utf8_lossy(&out.stderr);
         let err = err.trim();
         let err = if err.len() > 800 { &err[err.len() - 800..] } else { err };
         return Err(LaxError::msg(if err.is_empty() {
-            "npm install dbgate-serve не удался".into()
+            rust_i18n::t!("svc.dbgate_npm_failed").into_owned()
         } else {
             format!("npm install DbGate:\n{err}")
         }));
     }
     if dbgate_script(paths).is_none() {
-        return Err(LaxError::msg(
-            "DbGate не появился после npm install. Проверь сеть и логи.",
-        ));
+        return Err(LaxError::msg(rust_i18n::t!("svc.dbgate_missing_after_install")));
     }
     Ok(())
 }
 
 pub fn start_dbgate(table: &mut ProcessTable, paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
     let Some(script) = dbgate_script(paths) else {
-        tracing::warn!("DbGate not found in usr/apps/dbgate — skip");
+        tracing::warn!("{}", rust_i18n::t!("svc.dbgate_not_found_skip"));
         return Ok(());
     };
     if port_open(DBGATE_UI) {
         return Ok(());
     }
     let Some(node_dir) = crate::discover::node_bin_dir(&paths.root) else {
-        tracing::warn!("Node not found — cannot start DbGate");
+        tracing::warn!("{}", rust_i18n::t!("svc.node_not_found_start"));
         return Ok(());
     };
     let node = crate::platform::bin_path(&node_dir, "node");
@@ -438,9 +445,7 @@ fn ensure_datadir(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
     if code == 0 || data.join("mysql").exists() || data.join("ibdata1").exists() {
         return Ok(());
     }
-    Err(LaxError::msg(format!(
-        "failed to initialize MariaDB datadir:\n{out}"
-    )))
+    Err(LaxError::msg(rust_i18n::t!("svc.datadir_failed", out = out)))
 }
 
 fn mysql_server_bin(dir: &std::path::Path) -> std::path::PathBuf {
@@ -518,7 +523,7 @@ fn wait_port(port: u16, attempts: u32) -> LaxResult<()> {
         }
         thread::sleep(Duration::from_millis(150));
     }
-    Err(LaxError::msg(format!(
-        "service did not open port {port} in time"
-    )))
+    Err(LaxError::msg(
+        rust_i18n::t!("svc.wait_port_timeout", port = port),
+    ))
 }

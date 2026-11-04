@@ -8,11 +8,11 @@ import SettingsView from "@/views/SettingsView.vue";
 export default createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", name: "Обзор", component: DashboardView },
+    { path: "/", name: "overview", component: DashboardView },
     { path: "/services", redirect: "/" },
-    { path: "/projects", name: "Проекты", component: ProjectsView },
-    { path: "/php", name: "PHP", component: PhpView },
-    { path: "/logs", name: "Логи", component: LogsView },
-    { path: "/settings", name: "Настройки", component: SettingsView },
+    { path: "/projects", name: "projects", component: ProjectsView },
+    { path: "/php", name: "php", component: PhpView },
+    { path: "/logs", name: "logs", component: LogsView },
+    { path: "/settings", name: "settings", component: SettingsView },
   ],
 });

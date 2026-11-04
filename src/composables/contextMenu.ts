@@ -1,4 +1,5 @@
 import { reactive } from "vue";
+import { t } from "@/lib/i18n";
 
 export type CtxItem =
   | {
@@ -51,15 +52,15 @@ export function editMenuItems(el: HTMLInputElement | HTMLTextAreaElement): CtxIt
   };
   return [
     {
-      label: "Вырезать",
+      label: t("edit.cut"),
       run: run(() => document.execCommand("cut")),
     },
     {
-      label: "Копировать",
+      label: t("edit.copy"),
       run: run(() => document.execCommand("copy")),
     },
     {
-      label: "Вставить",
+      label: t("edit.paste"),
       run: run(async () => {
         try {
           const text = await navigator.clipboard.readText();
@@ -77,7 +78,7 @@ export function editMenuItems(el: HTMLInputElement | HTMLTextAreaElement): CtxIt
     },
     { type: "sep" },
     {
-      label: "Выделить всё",
+      label: t("edit.selectAll"),
       run: run(() => el.select()),
     },
   ];

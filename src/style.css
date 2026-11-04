@@ -46,18 +46,18 @@
 }
 
 [data-theme="paper"] {
-  --ink: #efe9dc;
-  --panel: #fffdf8;
-  --panel-2: #f3ece0;
-  --line: #e0d6c6;
-  --muted: #6a6358;
-  --text: #1a1712;
-  --accent: #c42b2b;
-  --ok: #1f8a58;
-  --warn: #9a7420;
-  --lift: #f3ece0;
-  --dot: #c9c0b2;
-  --field: #fff;
+  --ink: #e9dfcc;
+  --panel: #fbf5e9;
+  --panel-2: #f2e8d3;
+  --line: #ddd0b4;
+  --muted: #79694d;
+  --text: #221a0e;
+  --accent: #bf2e2e;
+  --ok: #1f7a46;
+  --warn: #8f6b1c;
+  --lift: #f3e9d4;
+  --dot: #cfc0a0;
+  --field: #fffaf0;
   --glow: transparent;
   --surface: var(--panel);
   --radius: 14px;
@@ -65,22 +65,22 @@
 }
 
 [data-theme="midnight"] {
-  --ink: #070b14;
-  --panel: #10192c;
-  --panel-2: #182338;
-  --line: #2a3650;
-  --muted: #8b97b0;
-  --text: #e8eef8;
-  --accent: #e24b56;
-  --ok: #3dd6b0;
-  --warn: #d4b45a;
-  --lift: #182338;
-  --dot: #3a4660;
-  --field: #0c1220;
+  --ink: #04070f;
+  --panel: #0b1322;
+  --panel-2: #111d33;
+  --line: #22345a;
+  --muted: #8093b8;
+  --text: #e9f0fd;
+  --accent: #e5484d;
+  --ok: #3fd6b4;
+  --warn: #d9b45c;
+  --lift: #152238;
+  --dot: #31456e;
+  --field: #060b15;
   --glow: transparent;
   --surface: var(--panel);
   --radius: 14px;
-  --elev: inset 0 1px 0 #2a3650;
+  --elev: inset 0 1px 0 #22345a;
 }
 
 [data-theme="quartz"] {
@@ -103,41 +103,41 @@
 }
 
 [data-theme="glass"] {
-  --ink: #10182a;
-  --panel: #182238;
-  --panel-2: #1e2a42;
-  --line: #3a4a66;
-  --muted: #9aa6bc;
-  --text: #f3f6fb;
+  --ink: #101a2e;
+  --panel: #1b2742;
+  --panel-2: #243356;
+  --line: #3c5178;
+  --muted: #9dabca;
+  --text: #f5f9ff;
   --accent: #e02430;
   --ok: #4fd4a4;
   --warn: #e0c36a;
-  --lift: #243044;
-  --dot: #4a5a74;
-  --field: #0e1624;
+  --lift: #2a3c60;
+  --dot: #4d628c;
+  --field: #0d1728;
   --glow: transparent;
-  --surface: #1a243c;
+  --surface: #1e2c4b;
   --radius: 16px;
-  --elev: inset 0 1px 0 #3d4e6c;
+  --elev: inset 0 1px 0 #3c5178;
 }
 
 [data-theme="obsidian"] {
-  --ink: #0c100e;
-  --panel: #161c18;
-  --panel-2: #1c2420;
-  --line: #2e3a34;
-  --muted: #93a199;
-  --text: #eef3ef;
+  --ink: #080d0b;
+  --panel: #121a16;
+  --panel-2: #1a241f;
+  --line: #27362d;
+  --muted: #8aa595;
+  --text: #edf5ef;
   --accent: #e02430;
-  --ok: #62e0a0;
+  --ok: #5fddaa;
   --warn: #d4b45a;
-  --lift: #1e2822;
-  --dot: #445248;
-  --field: #0a0e0c;
+  --lift: #1b2620;
+  --dot: #3c5146;
+  --field: #050807;
   --glow: transparent;
-  --surface: #181e1a;
+  --surface: #151e19;
   --radius: 16px;
-  --elev: inset 0 1px 0 #2c3830;
+  --elev: inset 0 1px 0 #27362d;
 }
 
 html {
@@ -157,6 +157,10 @@ body {
   overflow: hidden;
   background: var(--ink);
 }
+
+/* CJK glyphs are denser: bump size and line-height for zh */
+html[lang="zh-CN"] { font-size: 17px; }
+html[lang="zh-CN"] body { line-height: 1.5; }
 
 .app-root {
   background: var(--ink);
@@ -178,14 +182,23 @@ button.surface:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--ok) 45%, var(--line));
 }
 
-.btn-accent {
+.btn-primary {
+  background: color-mix(in srgb, var(--text) 92%, transparent);
+  color: var(--ink);
+}
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text) 82%, transparent);
+}
+.btn-primary:disabled { opacity: 0.4; }
+
+.btn-danger {
   background: var(--accent);
   color: #fff;
 }
-.btn-accent:hover:not(:disabled) {
+.btn-danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 86%, #fff);
 }
-.btn-accent:disabled { opacity: 0.4; }
+.btn-danger:disabled { opacity: 0.4; }
 
 .btn-ghost {
   border: 1px solid var(--line);
@@ -197,12 +210,27 @@ button.surface:hover:not(:disabled) {
   background: var(--lift);
 }
 
+.btn-chip {
+  min-width: 3.5rem;
+  justify-content: center;
+}
+
+.btn-primary,
+.btn-danger {
+  min-width: 4.5rem;
+  justify-content: center;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline-offset: 2px;
+}
+
 .nav-item { color: var(--muted); border-radius: 10px; }
 .nav-item:hover { color: var(--text); background: var(--lift); }
 .nav-active {
   color: var(--text);
-  background: var(--lift);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--lift));
 }
 
 .field {
@@ -218,8 +246,7 @@ button.surface:hover:not(:disabled) {
 
 .eyebrow {
   font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0.1em;
   color: var(--muted);
 }
 
@@ -248,6 +275,11 @@ button.surface:hover:not(:disabled) {
 .log-notice { color: var(--text); }
 .log-warn { color: var(--warn); }
 .log-err { color: var(--accent); }
+
+.log-view {
+  background: var(--field);
+  color: var(--text);
+}
 
 .spin { animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

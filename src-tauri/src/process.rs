@@ -51,6 +51,24 @@ impl ProcessTable {
         self.spawn_inner(name, program, args, cwd, env, Some(log))
     }
 
+    /// Store an already-spawned child (e.g. cloudflared with piped stdout
+    /// that a reader thread consumes) so it is tracked and killed with the rest.
+    pub fn insert_raw(&mut self, name: String, child: Child) {
+        self.stop(&name);
+        let pid = child.id();
+        #[cfg(windows)]
+        let job = unsafe { assign_job(&child) };
+        self.inner.insert(
+            name,
+            ManagedProcess {
+                pid,
+                child: Some(child),
+                #[cfg(windows)]
+                job,
+            },
+        );
+    }
+
     fn spawn_inner(
         &mut self,
         name: &str,

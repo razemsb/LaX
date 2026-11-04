@@ -1,0 +1,109 @@
+tray:
+  open: Open LaX
+  quit: Quit
+
+err:
+  lock_poisoned: state lock poisoned
+  unknown_ini: "unknown ini: %{which}"
+  unknown_action: "unknown action: %{action}"
+  unknown_service: "unknown service: %{id}"
+  project_outside_www: project must be inside www
+  package_json: package.json not found
+  composer_json: composer.json not found
+  bad_script_name: invalid script name
+  invalid_port: invalid port
+  unknown_theme: unknown theme
+
+msg:
+  wordpress_ready: "WordPress ready · http://localhost/%{slug}/"
+  dbgate_installed: DbGate installed. Opening on :8030
+  latest_version: "you're on the latest version · v%{version}"
+  no_update: no update available
+  downloading_update: downloading update…
+  files_updated: files updated. Restart LaX
+  stack_auto_started: stack started automatically
+  default_config: Started with default config
+  site_php_set: Site PHP updated · web server restarted
+
+db:
+  invalid_name: invalid database name
+  name_starts_with_letter: database name must start with a letter
+  latin_only: "database name: latin letters, digits and _ only"
+  mysql_client: mysql client not found
+  list_failed: "could not list databases (is MariaDB running?)\n%{out}"
+  create_failed: "could not create database:\n%{out}"
+  dump_too_big: dump is over 40 MB — import it via the mysql CLI
+  import_failed: "import failed:\n%{text}"
+
+php:
+  ini_not_found: php.ini not found
+  bad_memory: invalid memory_limit
+  bad_upload: invalid upload_max_filesize
+  bad_version: "unknown PHP version: %{version}"
+  xdebug_missing: no php_xdebug in this PHP version's ext/ — put the dll there and enable again
+
+platform:
+  http_only: only http(s) links are allowed
+
+proj:
+  exists: "project '%{slug}' already exists"
+  node_missing_fetch: Node not found in bin/node. Run npm run fetch-tools
+  unknown_template: "unknown template: %{other}"
+  laravel_scaffold: "Laravel: in terminal composer create-project → %{slug}"
+  vite_scaffold: "Vite + Vue: in terminal npm create → %{slug}"
+  wp_archive: WordPress archive is empty or unexpected
+  wp_download_failed: "WordPress download failed: %{e}"
+  not_listed: project created but not listed
+
+svc:
+  apache_linux: "Apache is not part of the portable stack on Linux (no httpd). Switch to Nginx — it is already in bin/nginx. Script: scripts/fetch-linux-stack.sh"
+  port_in_use_web: "port %{port} is already in use — stop Laragon or the other web server first"
+  port_in_use_apache: "port %{port} is already in use — stop Laragon or Apache first"
+  port_in_use_mysql: "port %{port} is already in use — stop the other MySQL/MariaDB instance"
+  nginx_missing: "nginx not found: %{dir}. On Linux: bash scripts/fetch-linux-stack.sh"
+  mariadb_missing: "MariaDB not found: %{dir}. On Linux: bash scripts/fetch-linux-stack.sh"
+  php_cgi_missing: "PHP CGI/FPM not found in %{dir}. On Linux: bash scripts/fetch-linux-stack.sh"
+  mailpit_missing_skip: mailpit not found in bin/mailpit — skipped
+  binary_missing: "binary not found: %{path}"
+  apache_config_test: "Apache config test failed:\n%{out}"
+  datadir_failed: "failed to initialize MariaDB datadir:\n%{out}"
+  wait_port_timeout: "service did not open port %{port} in time"
+  node_required_dbgate: Node not found in bin/node. DbGate cannot be installed without it.
+  node_next_to_bin: node not found next to bin/node
+  npm_next_to_node: npm not found next to the portable Node
+  npm_spawn_failed: "could not start npm: %{e}"
+  dbgate_npm_failed: npm install dbgate-serve failed
+  dbgate_missing_after_install: DbGate did not appear after npm install. Check the network and logs.
+  dbgate_not_found_skip: DbGate not found in usr/apps/dbgate — skipped
+  node_not_found_start: Node not found — cannot start DbGate
+
+state:
+  unknown_process: unknown
+  port_taken: "port %{port} is taken by %{process} (PID %{pid})"
+  port_not_open: "port %{port} did not open. Check the Apache/Nginx logs."
+  mailpit_missing_linux: Mailpit not found. Run bash scripts/fetch-linux-stack.sh — the binary will appear in bin/mailpit
+  mailpit_missing_win: Mailpit not found. Run scripts/fetch-tools.ps1 — the binary will appear in bin/mailpit
+  dbgate_not_installed: DbGate is not installed. Settings → database panel → Download DbGate
+  linux_port_needs_root: "port %{port} needs root/capabilities on Linux. Set 8080 in Settings."
+
+share:
+  starting: opening tunnel… the address will appear in a moment
+  missing: cloudflared not found in bin/cloudflared — download the binary (npm run fetch-tools)
+  already: this project is already shared
+  not_found: project not found in www
+
+update:
+  no_os_asset: no file for this OS in the release — open the release page
+  downloading: downloading update…
+  preparing: downloaded, preparing files…
+  installing_appimage: installing AppImage…
+  stopping: stopping the stack…
+  restarting: restarting LaX…
+  unknown_format: unknown update format
+  download_failed: "download failed: %{e}"
+  pct: "downloading %{pct}%"
+  unpacking: unpacking…
+  installing_pct: "installing files… %{pct}%"
+  installing: installing files…
+  done_files: "done · %{written} new files, %{skipped} unchanged"
+  not_appimage: this is not an AppImage — download the file manually from the release page

@@ -7,7 +7,7 @@ use crate::paths::unix;
 use crate::projects::ProjectInfo;
 use crate::process::write_file;
 
-pub fn regenerate(paths: &Paths, cfg: &LaxConfig, _projects: &[ProjectInfo]) -> LaxResult<()> {
+pub fn regenerate(paths: &Paths, cfg: &LaxConfig, projects: &[ProjectInfo]) -> LaxResult<()> {
     let apache_dir = paths.root.join("etc/apache2/sites-enabled");
     let nginx_dir = paths.root.join("etc/nginx/sites-enabled");
     fs::create_dir_all(&apache_dir)?;
@@ -17,7 +17,98 @@ pub fn regenerate(paths: &Paths, cfg: &LaxConfig, _projects: &[ProjectInfo]) -> 
     write_nginx_support(paths)?;
     write_defaults(paths, cfg)?;
     write_db_apps(paths, cfg)?;
+    if cfg.auto_vhost {
+        write_project_vhosts(paths, cfg, projects)?;
+    }
     patch_apache_listen(paths, cfg)?;
+    Ok(())
+}
+
+fn write_project_vhosts(paths: &Paths, cfg: &LaxConfig, projects: &[ProjectInfo]) -> LaxResult<()> {
+    let tld = cfg.tld.trim_start_matches('.');
+    let ports = crate::php::site_php_ports(paths, cfg);
+    for p in projects {
+        let name = p.name.chars()
+            .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '-' })
+            .collect::<String>();
+        let domain = format!("{name}.{tld}");
+        let docroot = unix(&crate::projects::document_root_for(Path::new(&p.path)));
+        let root = unix(&paths.root);
+        let override_php = p.php_version.clone().filter(|v| v != &cfg.php_version);
+        let apache_php = override_php.as_ref().and_then(|v| {
+            let dir = paths.root.join("bin").join("php").join(v);
+            dir.is_dir().then(|| unix(&dir))
+        });
+        let nginx_pass = override_php.as_ref().and_then(|v| {
+            ports.iter().find(|(ver, _)| ver == v).map(|(_, port)| *port)
+        });
+
+        let apache_php_block = apache_php.map(|dir| {
+            format!(
+                r#"    <Files ~ "\.php$">
+        AddHandler fcgid-script .php
+        Options +ExecCGI
+        FcgidWrapper "{dir}/php-cgi.exe" .php
+    </Files>
+    FcgidInitialEnv PHPRC "{dir}"
+"#
+            )
+        });
+
+        let apache = format!(
+            r#"<VirtualHost *:{port}>
+    ServerName {domain}
+    DocumentRoot "{docroot}"
+    <Directory "{docroot}">
+        Options Indexes FollowSymLinks Includes ExecCGI
+        AllowOverride All
+        Require all granted
+{php_block}    </Directory>
+</VirtualHost>
+"#,
+            port = cfg.apache_port,
+            php_block = apache_php_block.unwrap_or_default(),
+        );
+        write_file(
+            &paths.root.join(format!("etc/apache2/sites-enabled/auto.{name}.conf")),
+            &apache,
+        )?;
+
+        let fastcgi_pass = match nginx_pass {
+            Some(port) => format!("127.0.0.1:{port}"),
+            None => "php_upstream".to_string(),
+        };
+        let nginx = format!(
+            r#"server {{
+    listen {port};
+    server_name {domain};
+    root "{docroot}";
+    index index.html index.htm index.php;
+    client_max_body_size 2000M;
+
+    location / {{
+        try_files $uri $uri/ /index.php$is_args$args;
+        autoindex on;
+    }}
+
+    location ~ \.php$ {{
+        include "{root}/etc/nginx/fastcgi_params";
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_index index.php;
+        fastcgi_pass {fastcgi_pass};
+    }}
+
+    location = /favicon.ico {{ access_log off; log_not_found off; }}
+    location ~ /\.ht {{ deny all; }}
+}}
+"#,
+            port = cfg.nginx_port,
+        );
+        write_file(
+            &paths.root.join(format!("etc/nginx/sites-enabled/auto.{name}.conf")),
+            &nginx,
+        )?;
+    }
     Ok(())
 }
 

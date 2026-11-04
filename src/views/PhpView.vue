@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useAppStore } from "@/stores/app";
 import type { PhpExtension, PhpQuickSettings } from "@/types";
+import { t } from "@/lib/i18n";
 
 const store = useAppStore();
 const q = ref("");
@@ -71,7 +72,7 @@ watch(() => store.snap?.config.phpVersion, load);
 <template>
   <div v-if="store.snap" class="space-y-6">
     <section>
-      <div class="mb-3 text-[11px] uppercase tracking-wider text-muted">версия</div>
+      <div class="eyebrow mb-3">{{ t("php.version") }}</div>
       <div class="flex flex-wrap gap-2">
         <button
           v-for="ver in store.snap.phpVersions"
@@ -79,7 +80,7 @@ watch(() => store.snap?.config.phpVersion, load);
           class="rounded-lg border px-4 py-2 text-sm transition"
           :class="ver === store.snap.config.phpVersion
             ? 'border-accent/40 bg-accent/10 text-text'
-            : 'border-line text-muted hover:border-[#3f3f46] hover:text-text'"
+            : 'border-line text-muted hover:border-text/40 hover:text-text'"
           :disabled="store.busy"
           @click="store.switchPhp(ver)"
         >
@@ -90,8 +91,8 @@ watch(() => store.snap?.config.phpVersion, load);
 
     <section v-if="quick" class="surface space-y-4 p-4 sm:p-5">
       <div>
-        <div class="eyebrow">быстрый php.ini</div>
-        <p class="mt-1 text-xs text-muted">пишется сразу; если стек онлайн — PHP перезапустится</p>
+        <div class="eyebrow">{{ t("php.quick") }}</div>
+        <p class="mt-1 text-xs text-muted">{{ t("php.quickHint") }}</p>
       </div>
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -102,7 +103,7 @@ watch(() => store.snap?.config.phpVersion, load);
         >
           <div>
             <div class="text-sm">display_errors</div>
-            <div class="mt-0.5 text-[11px] text-muted">ошибки в браузере</div>
+            <div class="mt-0.5 text-[11px] text-muted">{{ t("php.errorsInBrowser") }}</div>
           </div>
           <span
             class="relative h-5 w-9 rounded-full border border-line"
@@ -118,13 +119,13 @@ watch(() => store.snap?.config.phpVersion, load);
         <button
           class="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-left disabled:opacity-50"
           :disabled="!!busyQuick || (!quick.xdebugAvailable && !quick.xdebug)"
-          :title="quick.xdebugAvailable ? '' : 'нет php_xdebug в ext/'"
+          :title="quick.xdebugAvailable ? '' : t('php.xdebugMissingTitle')"
           @click="patchQuick('xdebug', !quick.xdebug)"
         >
           <div>
             <div class="text-sm">Xdebug</div>
             <div class="mt-0.5 text-[11px] text-muted">
-              {{ quick.xdebugAvailable ? `IDE слушай :${quick.xdebugPort} · CGI :9003` : "dll не найдена в ext/" }}
+              {{ quick.xdebugAvailable ? t("php.xdebugIde", { port: quick.xdebugPort }) : t("php.xdebugMissing") }}
             </div>
           </div>
           <span
@@ -158,7 +159,7 @@ watch(() => store.snap?.config.phpVersion, load);
       </div>
 
       <div>
-        <div class="mb-2 text-xs text-muted">upload_max_filesize <span v-if="quick.postMaxSize" class="text-muted/80">· post {{ quick.postMaxSize }}</span></div>
+        <div class="mb-2 text-xs text-muted">upload_max_filesize <span v-if="quick.postMaxSize" class="text-muted/80">· {{ t("php.post") }} {{ quick.postMaxSize }}</span></div>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="opt in uploadChoices"
@@ -179,11 +180,11 @@ watch(() => store.snap?.config.phpVersion, load);
     <section>
       <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div class="min-w-0">
-          <div class="text-[11px] uppercase tracking-wider text-muted">расширения</div>
-          <p class="mt-1 text-xs text-muted">{{ onCount }} включено · после списка расширений лучше перезапустить стек</p>
+          <div class="eyebrow">{{ t("php.extensions") }}</div>
+          <p class="mt-1 text-xs text-muted">{{ t("php.extCount", { n: onCount }) }}</p>
         </div>
         <div class="flex min-w-0 gap-2">
-          <input v-model="q" data-page-search type="search" placeholder="поиск расширения  Ctrl+F" class="field min-w-0 flex-1 !py-2 lg:w-48 lg:flex-none" />
+          <input v-model="q" data-page-search type="search" :placeholder="t('php.search')" class="field min-w-0 flex-1 !py-2 lg:w-48 lg:flex-none" />
           <button class="btn-ghost shrink-0 rounded-lg px-3 py-2 text-xs" @click="store.openIni('php')">php.ini</button>
         </div>
       </div>
@@ -210,7 +211,7 @@ watch(() => store.snap?.config.phpVersion, load);
             />
           </span>
         </button>
-        <div v-if="!filtered.length" class="col-span-full px-3 py-6 text-sm text-muted">ничего не найдено</div>
+        <div v-if="!filtered.length" class="col-span-full px-3 py-6 text-sm text-muted">{{ t("php.nothingFound") }}</div>
       </div>
     </section>
   </div>

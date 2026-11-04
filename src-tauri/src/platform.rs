@@ -48,7 +48,7 @@ pub fn hide_window(cmd: &mut Command) {
 pub fn open_url(url: &str) -> Result<(), String> {
     let url = url.trim();
     if !(url.starts_with("http://") || url.starts_with("https://")) {
-        return Err("разрешены только http(s) ссылки".into());
+        return Err(rust_i18n::t!("platform.http_only").to_string());
     }
     #[cfg(windows)]
     {
