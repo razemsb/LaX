@@ -79,13 +79,14 @@ if (-not (Test-Path $nodeExe)) {
 }
 
 # --- cloudflared (quick tunnels, public share) ---
+# Pinned version: exactly the binary the release was tested with.
+$CfVersion = "2026.10.7"
 $cfDir = Join-Path $Root "bin\cloudflared"
 $cfExe = Join-Path $cfDir "cloudflared.exe"
 if (-not (Test-Path $cfExe)) {
-    Write-Host "==> cloudflared (win-amd64)"
+    Write-Host "==> cloudflared $CfVersion (win-amd64)"
     New-Item -ItemType Directory -Force -Path $cfDir | Out-Null
-    $rel = (Invoke-RestMethod "https://api.github.com/repos/cloudflare/cloudflared/releases/latest").tag_name
-    Get-Zip "https://github.com/cloudflare/cloudflared/releases/download/$rel/cloudflared-windows-amd64.exe" $cfExe
+    Get-Zip "https://github.com/cloudflare/cloudflared/releases/download/$CfVersion/cloudflared-windows-amd64.exe" $cfExe
     Write-Host "ok $cfExe"
 } else {
     Write-Host "skip cloudflared (already in bin/cloudflared)"

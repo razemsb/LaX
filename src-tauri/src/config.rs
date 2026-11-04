@@ -45,7 +45,7 @@ pub struct LaxConfig {
     pub start_web: bool,
     #[serde(default = "default_true", alias = "start_mailpit")]
     pub start_mailpit: bool,
-    #[serde(default, alias = "start_dbgate")]
+    #[serde(default, alias = "start_dbgate", alias = "startDbGate", alias = "start_db_gate")]
     pub start_dbgate: bool,
     #[serde(default = "default_language", alias = "language")]
     pub language: String,
