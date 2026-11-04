@@ -548,7 +548,7 @@ fn unix_port_allowed(port: u16) -> Result<(), String> {
     match TcpListener::bind(("127.0.0.1", port)) {
         Ok(_) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => Err(
-            rust_i18n::t!("state.linux_port_needs_root", port = port),
+            rust_i18n::t!("state.linux_port_needs_root", port = port).into_owned(),
         ),
         Err(_) => Ok(()),
     }

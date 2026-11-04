@@ -4,7 +4,6 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
-use crate::platform;
 
 pub fn list_subdirs(dir: &Path) -> Vec<String> {
     let mut names = Vec::new();
@@ -112,7 +111,7 @@ pub fn port_listener(port: u16) -> Option<(u32, String)> {
 fn windows_listener(port: u16) -> Option<(u32, String)> {
     let mut cmd = Command::new("netstat");
     cmd.args(["-ano", "-p", "tcp"]);
-    platform::hide_window(&mut cmd);
+    crate::platform::hide_window(&mut cmd);
     let out = cmd.output().ok()?;
     let text = String::from_utf8_lossy(&out.stdout);
     for line in text.lines() {
@@ -141,7 +140,7 @@ fn windows_listener(port: u16) -> Option<(u32, String)> {
 fn process_name(pid: u32) -> Option<String> {
     let mut cmd = Command::new("tasklist");
     cmd.args(["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"]);
-    platform::hide_window(&mut cmd);
+    crate::platform::hide_window(&mut cmd);
     let out = cmd.output().ok()?;
     let line = String::from_utf8_lossy(&out.stdout);
     let line = line.lines().next()?.trim();
