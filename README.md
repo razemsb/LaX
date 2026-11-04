@@ -7,13 +7,13 @@
 **Портативный локальный стек.**  
 Распаковал → `lax.exe` → `http://localhost/папка/`
 
-Apache · Nginx · MariaDB · PHP · Mailpit · DbGate · GUI
+Apache · Nginx · MariaDB · PHP · Mailpit · DbGate · Cloudflare Tunnel · GUI
 
 [![release](https://img.shields.io/github/v/release/razemsb/LaX?color=E02430&label=release&style=for-the-badge)](https://github.com/razemsb/LaX/releases)
 [![windows](https://img.shields.io/badge/Windows-стек-111?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/razemsb/LaX/releases)
 [![license](https://img.shields.io/badge/portable-без%20установщика-E02430?style=for-the-badge)](https://github.com/razemsb/LaX/releases/latest)
 
-[Скачать zip](https://github.com/razemsb/LaX/releases/latest) · [Issues](https://github.com/razemsb/LaX/issues) · [Фидбек](https://github.com/razemsb/LaX/issues/new)
+[Скачать zip](https://github.com/razemsb/LaX/releases/latest) · [Issues](https://github.com/razemsb/LaX/issues) · [Фидек](https://github.com/razemsb/LaX/issues/new)
 
 </div>
 
@@ -24,6 +24,8 @@ Apache · Nginx · MariaDB · PHP · Mailpit · DbGate · GUI
   <a href="#-пять-минут">старт</a> ·
   <a href="#-экраны">экраны</a> ·
   <a href="#-проекты">проекты</a> ·
+  <a href="#-публичный-доступ">публичный доступ</a> ·
+  <a href="#-автодомены">автодомены</a> ·
   <a href="#-php">php</a> ·
   <a href="#-почта-и-базы">почта</a> ·
   <a href="#-сборка">сборка</a>
@@ -80,13 +82,16 @@ Apache · Nginx · MariaDB · PHP · Mailpit · DbGate · GUI
 
 ```
 Обзор     сервисы · сайты · базы · превью
-Проекты   шаблоны · ПКМ-команды · поиск
+Проекты   шаблоны · ПКМ-команды · свой PHP · поиск
 PHP       версия · php.ini · Xdebug
 Логи      Apache / Nginx / MariaDB / PHP / Mailpit / DbGate
-Настройки порты · автостарт · обновления
+Настройки порты · автостарт · обновления · язык · окно · автодомены
 ```
 
-Клик по карточке сервиса — старт / стоп. Зелёная обводка = онлайн.
+Клик по карточке сервиса — старт / стоп. Зелёная точка = онлайн, янтарная — запускается.
+
+Интерфейс — на трёх языках: **Русский · English · 中文** (Настройки → Язык, без перезапуска).
+Режимы окна — **маленький / средний / большой** (Настройки → Окно). Маленький показывает только статусы сервисов и кнопку старт/стоп — удобно держать в углу экрана.
 
 ---
 
@@ -103,10 +108,32 @@ PHP       версия · php.ini · Xdebug
 
 Пока composer/npm крутятся, список подхватит папку сам.
 
-На карточке: сайт · папка · терминал · VS Code.  
-Остальное — **правая кнопка**: `npm install`, `composer install`, все `npm run …`.
+На карточке: сайт · папка · терминал · VS Code · **селектор версии PHP** (своя на каждый сайт).  
+Остальное — **правая кнопка**: `npm install`, `composer install`, все `npm run …`, **«Поделиться сайтом»** (публичный доступ через Cloudflare).
 
 Vite в dev — кнопка `:5173`. Сборка как подпапка Apache — это уже `base` в `vite.config`.
+
+---
+
+## Публичный доступ
+
+**ПКМ по проекту → «Поделиться сайтом»** — через ~5 секунд сайт получает публичный адрес `https://случайные-слова.trycloudflare.com` и открывается с любого устройства.
+
+Работает на **Cloudflare quick tunnel** — без аккаунта, токена и настройки DNS. Единственное, что нужно, — бинарник `bin/cloudflared/cloudflared.exe` (в релизе уже лежит; пропал — `npm run fetch-tools`).
+
+Безопасность как фича: пока доступ открыт, сверху висит **янтарный баннер** с адресом и кнопкой «закрыть» — локалка не останется торчать наружу незамеченной. «Закрыть все» и выход из приложения гасят все туннели.
+
+> Адрес меняется при каждом открытии доступа. Постоянный адрес на своём домене (`demo.мойдомен.com`) — следующий уровень: named tunnels, для тех, у кого есть аккаунт Cloudflare.
+
+---
+
+## Автодомены
+
+Создал папку в `www` — получил красивый адрес. Фирменная фишка Laragon — теперь и здесь.
+
+Включи **Настройки → Автодомены**: каждый проект открывается как `http://имя-проекта.test/` (домен настраивается, по умолчанию `test`). LaX сам пишет виртуальные хосты Apache/Nginx и синкает `hosts`-файл — веб-сервер перезапускается сам, если онлайн.
+
+Нужны права на запись в `hosts` (Windows: запуск от администратора) — приложение подскажет, если их нет.
 
 ---
 
@@ -170,9 +197,13 @@ mysqlPort     = 3306
 phpVersion    = "php-trash-8.2"
 autoStart     = false          # поднять стек при открытии
 mysqlEnabled  = true
+autoVhost     = false          # автодомены: имя-проекта.tld
+tld           = "test"
+language      = "ru"           # ru | en | zh
+windowMode    = "medium"       # mini | medium | large
 ```
 
-`tld` и `autoVhost` уже в файле — красивые `проект.test` ещё не включены.
+Так же в GUI: переключатель языка, режимы окна, автодомены. Своя версия PHP на сайт живёт отдельно — `usr/site_php.toml` (задаётся селектором в карточке проекта).
 
 <details>
 <summary><strong>Порты</strong></summary>
@@ -237,7 +268,7 @@ npm run pack            # портативное дерево → pack/
 | `npm run build` | типы + `dist/` |
 | `npm run build:exe` | релизный exe |
 | `npm run pack` | полный каталог |
-| `npm run fetch-tools` | Mailpit и Node (DbGate — кнопка в GUI) |
+| `npm run fetch-tools` | Mailpit, Node и cloudflared (DbGate — кнопка в GUI) |
 
 Linux AppImage: тег `v*` или Actions → **Linux**. Рядом со стеком:
 
@@ -270,6 +301,8 @@ Apache на Linux не поставляется — нет портативно�
 | `mail()` пусто | Mailpit выключен или нет бинарника |
 | нет npm / composer | нет `package.json` / `composer.json`, либо нет Node |
 | Xdebug молчит | IDE на `:9000`, не на `:9003` |
+| шеринг крутит «открываю…» | нет `bin/cloudflared/cloudflared.exe` → `npm run fetch-tools`; адрес появляется через ~5 с |
+| автодомены не открываются | запуск от администратора (запись в `hosts`) |
 | обновление зависло (≤ 0.1.3) | снять `lax.exe`, поставить [0.1.4+](https://github.com/razemsb/LaX/releases) |
 
 ---
