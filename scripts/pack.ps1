@@ -149,9 +149,8 @@ function Install-PmaLaxTheme($LaXRoot, $PmaRoot) {
 }
 Install-PmaLaxTheme $Root "$Dest\etc\apps\phpMyAdmin"
 
-# marker so first Start All rebases paths from the original tree
-$unix = ($Dest -replace '\\', '/')
-Set-Content -Path "$Dest\usr\.install-root" -Value "C:/Laragon/www/LaX" -Encoding ASCII
+# .install-root was already written right after the usr copy with the
+# actual pack root — the marker must match the paths baked into configs.
 
 Write-Host "Packed to $Dest"
 Write-Host "Copy the contents of pack\ to the folder where LaX should live, then run lax.exe"
