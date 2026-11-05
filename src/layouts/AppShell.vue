@@ -18,6 +18,7 @@ import Banner from "@/components/Banner.vue";
 import CloseDialog from "@/components/CloseDialog.vue";
 import ContextMenu from "@/components/ContextMenu.vue";
 import MiniView from "@/views/MiniView.vue";
+import ShareDialog from "@/components/ShareDialog.vue";
 import {
   editMenuItems,
   isEditableTarget,
@@ -157,6 +158,7 @@ onUnmounted(() => {
 <template>
   <div class="app-root flex h-full min-h-0" @contextmenu="onRootContext">
     <ContextMenu />
+    <ShareDialog />
     <CloseDialog
       v-if="showCloseDialog"
       @tray="showCloseDialog = false; store.hideWindow()"

@@ -51,6 +51,8 @@ pub fn write_share_vhost(paths: &Paths, cfg: &LaxConfig, p: &ProjectInfo, port: 
         .collect::<String>();
 
     if cfg.web_server == "apache" {
+        // The global Aliases (etc/apache2/alias) apply to every vhost —
+        // block them here so a public share can never reach the admin apps.
         let apache = format!(
             r#"Listen 127.0.0.1:{port}
 <VirtualHost 127.0.0.1:{port}>
@@ -60,6 +62,9 @@ pub fn write_share_vhost(paths: &Paths, cfg: &LaxConfig, p: &ProjectInfo, port: 
         AllowOverride All
         Require all granted
     </Directory>
+    <LocationMatch "(?i)^/(phpmyadmin|laragon|memcached|redis|adminer)">
+        Require all denied
+    </LocationMatch>
 </VirtualHost>
 "#
         );
@@ -343,6 +348,11 @@ Alias /phpMyAdmin "{pma}/"
     )?;
     let _ = fs::remove_file(paths.root.join("etc/apache2/alias/adminer.conf"));
     let _ = fs::remove_file(paths.root.join("etc/nginx/alias/adminer.conf"));
+    // legacy Laragon-era aliases (their targets are not shipped)
+    for stale in ["laragon", "memcached", "redis"] {
+        let _ = fs::remove_file(paths.root.join("etc/apache2/alias").join(format!("{stale}.conf")));
+        let _ = fs::remove_file(paths.root.join("etc/nginx/alias").join(format!("{stale}.conf")));
+    }
     install_pma_theme(paths);
     Ok(())
 }

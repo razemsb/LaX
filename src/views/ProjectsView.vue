@@ -5,6 +5,7 @@ import { useAppStore } from "@/stores/app";
 import type { ProjectInfo } from "@/types";
 import { projectCommands, projectContextItems } from "@/lib/projectCommands";
 import { showContextMenu } from "@/composables/contextMenu";
+import { askShare } from "@/composables/share";
 import { t, type MsgKey } from "@/lib/i18n";
 
 const store = useAppStore();
@@ -57,8 +58,7 @@ function tunnelFor(p: ProjectInfo) {
 }
 
 function onShare(path: string) {
-  if (!window.confirm(t("share.warning"))) return;
-  store.shareProject(path);
+  askShare(path);
 }
 
 function acts() {

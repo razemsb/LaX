@@ -12,6 +12,7 @@ import {
 import { useAppStore } from "@/stores/app";
 import StatusPill from "@/components/StatusPill.vue";
 import { showContextMenu } from "@/composables/contextMenu";
+import { askShare } from "@/composables/share";
 import { projectContextItems } from "@/lib/projectCommands";
 import { dbAdminLabel, dbAdminUrl } from "@/lib/dbAdmin";
 import { SERVICE_ICONS, SERVICE_NAMES } from "@/lib/serviceMeta";
@@ -99,8 +100,7 @@ function tunnelFor(p: ProjectInfo) {
 }
 
 function onShare(path: string) {
-  if (!window.confirm(t("share.warning"))) return;
-  store.shareProject(path);
+  askShare(path);
 }
 
 function onProjectMenu(e: MouseEvent, p: ProjectInfo) {

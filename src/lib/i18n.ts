@@ -135,6 +135,13 @@ const STRINGS = {
     en: "Anyone with the link will be able to open the site. Continue?",
     zh: "任何获得链接的人都将可以访问该网站。是否继续？",
   },
+  "share.dialogTitle": { ru: "Открыть публичный доступ?", en: "Open public access?", zh: "开放公开访问？" },
+  "share.dialogHint": {
+    ru: "Сайт получит адрес trycloudflare.com — его сможет открыть любой, у кого будет ссылка. Доступ можно закрыть в любой момент.",
+    en: "The site gets a trycloudflare.com address — anyone with the link can open it. You can close access at any time.",
+    zh: "网站将获得 trycloudflare.com 地址——任何获得链接的人都可以访问。可以随时关闭访问。",
+  },
+  "share.confirm": { ru: "Открыть доступ", en: "Open access", zh: "开放访问" },
   "proj.phpDefault": { ru: "PHP по умолчанию", en: "Default PHP", zh: "默认 PHP" },
   "share.public": { ru: "публично", en: "public", zh: "公开" },
   "share.opening": { ru: "открываю доступ…", en: "opening access…", zh: "正在开启访问…" },
