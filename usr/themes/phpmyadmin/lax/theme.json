@@ -1,7 +1,7 @@
 {
     "name": "LaX",
-    "version": "1.7",
-    "description": "LaX dark theme — JetBrains Mono, accent #E02430",
+    "version": "2.0",
+    "description": "LaX dark theme 2.0 — JetBrains Mono, accent #E02430, token-based palette",
     "author": "LaX",
     "url": "https://github.com/razemsb/LaX",
     "supports": ["5.0", "5.1", "5.2"]
