@@ -404,10 +404,9 @@ fn install_pma_theme_inner(paths: &Paths) -> LaxResult<()> {
             format!("{rtl}\n\n/* ---- LaX ---- */\n{overlay}"),
         )?;
     }
-    let ui = fs::read_to_string(homme.join("jquery/jquery-ui.css")).unwrap_or_default();
-    // jquery-ui.css is loaded only on pages with UI widgets, while
-    // theme.css (which carries the full overlay) loads everywhere —
-    // keep the base jquery-ui css untouched to avoid loading the overlay twice.
+    let mut ui = fs::read_to_string(homme.join("jquery/jquery-ui.css")).unwrap_or_default();
+    ui.push_str("\n\n/* ---- LaX ---- */\n");
+    ui.push_str(&overlay);
     fs::write(dest.join("jquery/jquery-ui.css"), ui)?;
 
     patch_pma_config(&pma.join("config.inc.php"))?;
@@ -451,34 +450,21 @@ fn patch_pma_css_cache_bust(path: &Path) -> LaxResult<()> {
         return Ok(());
     }
     let mut body = fs::read_to_string(path)?;
-    // fresh phpMyAdmin: attach the bust query to both css links
-    if !body.contains("lax=") {
-        body = body.replace(
-            "href=\"{{ theme_path }}/jquery/jquery-ui.css\"",
-            "href=\"{{ theme_path }}/jquery/jquery-ui.css?lax=18\"",
-        );
-        body = body.replace(
-            "css/theme{{ text_dir == 'rtl' ? '.rtl' }}.css?{{ version }}\"",
-            "css/theme{{ text_dir == 'rtl' ? '.rtl' }}.css?{{ version }}&lax=18\"",
-        );
-    }
-    // normalize any existing bust number to the current one
-    const MARK: &str = "lax=";
-    let mut out = String::with_capacity(body.len());
-    let mut rest = body.as_str();
-    while let Some(i) = rest.find(MARK) {
-        out.push_str(&rest[..i + MARK.len()]);
-        let after = &rest[i + MARK.len()..];
-        let digits = after.bytes().take_while(|b| b.is_ascii_digit()).count();
-        if digits > 0 {
-            out.push_str("18");
-            rest = &after[digits..];
-        } else {
-            rest = after;
-        }
-    }
-    out.push_str(rest);
-    fs::write(path, out)?;
+    body = body.replace(
+        "href=\"{{ theme_path }}/jquery/jquery-ui.css\"",
+        "href=\"{{ theme_path }}/jquery/jquery-ui.css?lax=17\"",
+    );
+    body = body.replace(
+        "css/theme{{ text_dir == 'rtl' ? '.rtl' }}.css?{{ version }}\"",
+        "css/theme{{ text_dir == 'rtl' ? '.rtl' }}.css?{{ version }}&lax=17\"",
+    );
+    body = body.replace("jquery-ui.css?lax=12", "jquery-ui.css?lax=17");
+    body = body.replace("jquery-ui.css?lax=13", "jquery-ui.css?lax=17");
+    body = body.replace("jquery-ui.css?lax=14", "jquery-ui.css?lax=17");
+    body = body.replace("&lax=12", "&lax=17");
+    body = body.replace("&lax=13", "&lax=17");
+    body = body.replace("&lax=14", "&lax=17");
+    fs::write(path, body)?;
     Ok(())
 }
 
