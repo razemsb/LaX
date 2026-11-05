@@ -38,6 +38,9 @@ if (-not (Test-Path $npmCli)) {
 Invoke-Robo "$Root\etc" "$Dest\etc" @("tmp")
 # Keep usr/apps/dbgate/package.json; node_modules (~350 MB) is installed from the GUI.
 Invoke-Robo "$Root\usr" "$Dest\usr" @("node_modules")
+# The marker must name the root baked into the shipped configs, so the
+# first-run rebase on the user's machine can rewrite every path.
+Set-Content -Path (Join-Path $Dest "usr\.install-root") -NoNewline -Value ($Root -replace '\\', '/')
 Invoke-Robo "$Root\data" "$Dest\data"
 
 # Release www is EFM — always the latest release of github.com/razemsb/FileManager.

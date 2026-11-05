@@ -272,6 +272,17 @@ impl Orchestrator {
         php::apply_php(&self.paths, &self.config)?;
         let projects = projects::list_projects(&self.paths, &self.config)?;
         vhosts::regenerate(&self.paths, &self.config, &projects)?;
+        // regenerate clears share.* vhosts — put them back for active tunnels
+        let shares: Vec<(String, u16)> = self
+            .tunnels
+            .iter()
+            .filter_map(|(k, t)| t.port.map(|p| (k.clone(), p)))
+            .collect();
+        for (name, port) in shares {
+            if let Some(p) = projects.iter().find(|p| p.name == name) {
+                let _ = vhosts::write_share_vhost(&self.paths, &self.config, p, port);
+            }
+        }
         let _ = hosts::sync_hosts(&projects, &self.config.tld, self.config.auto_vhost);
         self.last_message = None;
         if port_open(self.web_port()) {

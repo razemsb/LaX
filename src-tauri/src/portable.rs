@@ -19,6 +19,10 @@ pub fn rebase(paths: &Paths, cfg: &LaxConfig) -> LaxResult<()> {
     }
     olds.push("C:/Laragon/www/LaX".into());
     olds.push(r"C:\Laragon\www\LaX".into());
+    // 0.2.0 shipped configs baked from the repo checkout at this path while
+    // the marker still said C:/Laragon/www/LaX — heal those installs.
+    olds.push("C:/LaX/www/LaX".into());
+    olds.push(r"C:\LaX\www\LaX".into());
     olds.sort_by_key(|s| std::cmp::Reverse(s.len()));
     olds.dedup();
 

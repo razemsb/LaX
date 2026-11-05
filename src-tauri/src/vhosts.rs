@@ -43,6 +43,7 @@ fn clear_share_confs(dir: &Path) -> LaxResult<()> {
 /// one project on 127.0.0.1:<port>, so the tunnel cannot reach phpMyAdmin,
 /// the FileManager or other projects on the main web port.
 pub fn write_share_vhost(paths: &Paths, cfg: &LaxConfig, p: &ProjectInfo, port: u16) -> LaxResult<()> {
+    clear_share_vhost(paths, &p.name);
     let docroot = unix(&crate::projects::document_root_for(Path::new(&p.path)));
     let root = unix(&paths.root);
     let name = p.name.chars()

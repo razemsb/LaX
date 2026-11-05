@@ -421,7 +421,10 @@ fn skip_rel(rel: &Path) -> bool {
             .map(|c| c.as_os_str().to_string_lossy().into_owned())
             .collect::<Vec<_>>()
             .join("/");
-        if rest == "lax.toml" || rest == ".install-root" {
+        // lax.toml is user config; .install-root is intentionally NOT
+        // protected — the package ships the path baked into its configs,
+        // and the startup rebase needs that exact cursor to rewrite them.
+        if rest == "lax.toml" {
             return true;
         }
     }
