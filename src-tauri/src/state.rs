@@ -286,7 +286,7 @@ impl Orchestrator {
         let _ = hosts::sync_hosts(&projects, &self.config.tld, self.config.auto_vhost);
         self.last_message = None;
         if port_open(self.web_port()) {
-            self.start_web()?;
+            self.restart_web()?;
         }
         Ok(())
     }
@@ -367,6 +367,18 @@ impl Orchestrator {
             }
         }
         Ok(())
+    }
+
+    /// Stop and start the web server unconditionally, so new Listen
+    /// directives / vhosts on disk actually get loaded (start_web skips
+    /// servers whose port is already open).
+    pub(crate) fn restart_web(&mut self) -> LaxResult<()> {
+        services::stop_apache(&mut self.procs);
+        services::stop_nginx(&mut self.procs, &self.paths, &self.config);
+        if self.config.web_server != "nginx" {
+            services::stop_php_cgi(&mut self.procs);
+        }
+        self.start_web()
     }
 
     pub fn start_service(&mut self, id: &str) -> LaxResult<()> {

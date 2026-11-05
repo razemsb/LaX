@@ -339,7 +339,7 @@ pub fn share_project(state: State<AppState>, path: String) -> Result<Snapshot, S
         }
         let port = pick_share_port(&o.config)?;
         crate::vhosts::write_share_vhost(&o.paths, &o.config, &p, port).map_err(|e| e.to_string())?;
-        o.start_web().map_err(|e| e.to_string())?;
+        o.restart_web().map_err(|e| e.to_string())?;
         let local = format!("http://127.0.0.1:{port}");
         o.tunnels.insert(
             p.name.clone(),
@@ -375,7 +375,7 @@ pub fn unshare_project(state: State<AppState>, path: String) -> Result<Snapshot,
                 o.config.apache_port
             };
             if discover::port_open(web_port) {
-                let _ = o.start_web();
+                let _ = o.restart_web();
             }
         }
         Ok(o.snapshot())
